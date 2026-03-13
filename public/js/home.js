@@ -151,24 +151,44 @@ window.openChat = function(userId, name) {
     window.location.href = `chat.html?id=${userId}&name=${encodeURIComponent(name)}`;
 }
 
-userSearchInput.addEventListener('input', async (e) => {
-    const q = e.target.value.trim();
+let searchDebounce;
+userSearchInput.addEventListener('input', (e) => {
+    const q = e.target.value.trim().toLowerCase();
+    
+    clearTimeout(searchDebounce);
     if (q.length < 1) {
         renderChats(allLoadedChats);
         return;
     }
 
-    const usersRef = ref(db, 'users');
-    const userQuery = query(usersRef, orderByChild('username'), startAt(q), endAt(q + '\uf8ff'));
-    
-    const snapshot = await get(userQuery);
-    const users = [];
-    snapshot.forEach(child => {
-        if (child.key !== currentUser.id) {
-            users.push({ id: child.key, ...child.val() });
+    // Debounce to improve speed/performance
+    searchDebounce = setTimeout(async () => {
+        console.log("Searching for:", q);
+        try {
+            const usersRef = ref(db, 'users');
+            // Since Firebase doesn't support full-text search natively without third-party services,
+            // we use a specific range query for prefixes.
+            const userQuery = query(usersRef, orderByChild('username'), startAt(q), endAt(q + '\uf8ff'));
+            
+            const snapshot = await get(userQuery);
+            const users = [];
+            snapshot.forEach(child => {
+                const userData = child.val();
+                if (child.key !== currentUser.id) {
+                    users.push({ id: child.key, ...userData });
+                }
+            });
+            
+            console.log("Found users:", users.length);
+            renderSearchResults(users);
+        } catch (error) {
+            console.error("Search failed:", error);
+            // Fallback: If indexing is slow, notify user
+            if (error.message.includes('index')) {
+                chatListContainer.innerHTML = '<div class="p-8 text-center text-gray-400">Database is indexing new users. Please try again in a moment.</div>';
+            }
         }
-    });
-    renderSearchResults(users);
+    }, 300);
 });
 
 function renderSearchResults(users) {

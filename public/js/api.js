@@ -38,12 +38,16 @@ onAuthStateChanged(auth, async (user) => {
             if (snapshot.exists()) {
                 const userData = snapshot.val();
                 User.set({ ...userData, id: user.uid });
+                // If we are on the login page, redirect to home immediately
+                if (window.location.pathname === '/' || window.location.pathname.includes('index.html')) {
+                    window.location.href = 'home.html';
+                }
             } else {
                 // If profile missing, set minimal data
                 const minimal = { id: user.uid, email: user.email, name: user.displayName || 'User' };
                 User.set(minimal);
             }
-        });
+        }, { onlyOnce: true }); // optimize for login check
 
         // Online status in 'status' node
         const statusRef = ref(db, 'status/' + user.uid);

@@ -1,3 +1,6 @@
+
+import { db, ref, get, update } from './firebase-config.js';
+
 const currentUser = User.get();
 if (!currentUser) window.location.href = '/index.html';
 
@@ -9,129 +12,108 @@ let currentEditingField = '';
 
 async function loadProfile() {
     try {
-        const response = await API.get(`/api/user/${targetId}`);
-        const user = response.user;
-        const cacheBuster = `?t=${Date.now()}`;
+        const userRef = ref(db, 'users/' + targetId);
+        const snap = await get(userRef);
+        if (!snap.exists()) throw new Error("User not found");
+        
+        const user = snap.val();
+        if (isOwner) User.set({ ...user, id: targetId });
 
-        // Sync local storage if it's the owner's profile
-        if (isOwner) User.set(user);
-
-        // Populate fields
-        document.getElementById('profile-name').innerText = user.name || 'User';
+        document.getElementById('profile-name').innerText = user.name || user.username || 'User';
         document.getElementById('profile-username').innerText = `@${user.username || 'username'}`;
         document.getElementById('profile-about').innerText = user.about || 'Hey there! I am using QuickMsg.';
         document.getElementById('profile-phone').innerText = user.phone || 'No phone added';
         document.getElementById('profile-links').innerText = user.links || 'No links added';
 
-        if (user.avatar) {
-            const avatarUrl = user.avatar.includes('/') ? user.avatar : "/uploads/" + user.avatar;
-            document.getElementById('profile-avatar').src = avatarUrl + cacheBuster;
+        const avatarImg = document.getElementById('profile-avatar');
+        if (user.avatar && user.avatar !== 'default.png') {
+            avatarImg.src = user.avatar;
         } else {
-            document.getElementById('profile-avatar').src = `https://ui-avatars.com/api/?name=${encodeURIComponent(user.name)}&background=random&size=200`;
+            avatarImg.src = `https://ui-avatars.com/api/?name=${encodeURIComponent(user.name || user.username)}&background=random&size=200`;
         }
 
-        // Show/Hide Edit UI
         if (isOwner) {
-            document.getElementById('edit-avatar-btn').classList.remove('hidden');
-            document.getElementById('edit-about-btn').classList.remove('hidden');
-            document.getElementById('edit-phone-btn').classList.remove('hidden');
-            document.getElementById('edit-links-btn').classList.remove('hidden');
+            document.querySelectorAll('.edit-btn').forEach(btn => btn.classList.remove('hidden'));
             document.getElementById('extra-actions').classList.remove('hidden');
-            
-            // Set up edit listeners
             setupEditListeners();
         }
     } catch (err) {
         console.error("Error loading profile:", err);
-        showToast("User not found");
     }
 }
 
 function setupEditListeners() {
-    document.getElementById('edit-avatar-btn').onclick = () => document.getElementById('avatar-input').click();
+    const editAvatarBtn = document.getElementById('edit-avatar-btn');
+    const avatarInput = document.getElementById('avatar-input');
     
-    document.getElementById('avatar-input').onchange = async (e) => {
-        const file = e.target.files[0];
-        if (!file) return;
-
-        const formData = new FormData();
-        formData.append('avatar', file);
-
-        try {
+    if (editAvatarBtn && avatarInput) {
+        editAvatarBtn.onclick = () => avatarInput.click();
+        avatarInput.onchange = async (e) => {
+            const file = e.target.files[0];
+            if (!file) return;
             showToast('Uploading photo...');
-            const data = await API.post('/api/avatar', formData, true);
-            if (data.ok) {
+            try {
+                const url = await API.uploadFile(file, 'avatars');
+                await update(ref(db, 'users/' + targetId), { avatar: url });
                 showToast('Avatar updated!');
                 loadProfile();
+            } catch (err) {
+                showToast('Failed to upload image');
             }
-        } catch (err) {
-            showToast('Failed to upload image');
-        }
+        };
+    }
+
+    const editActions = {
+        'edit-about-btn': 'about',
+        'edit-phone-btn': 'phone',
+        'edit-links-btn': 'links'
     };
 
-    document.getElementById('edit-about-btn').onclick = () => openEditModal('about');
-    document.getElementById('edit-phone-btn').onclick = () => openEditModal('phone');
-    document.getElementById('edit-links-btn').onclick = () => openEditModal('links');
+    Object.entries(editActions).forEach(([btnId, field]) => {
+        const btn = document.getElementById(btnId);
+        if (btn) btn.onclick = () => openEditModal(field);
+    });
 }
 
-function openEditModal(field) {
+window.openEditModal = function(field) {
     currentEditingField = field;
     const modal = document.getElementById('editModal');
     const title = document.getElementById('modalTitle');
     const input = document.getElementById('modalInput');
-    
     const displayElement = document.getElementById(`profile-${field}`);
-    const currentValue = displayElement.innerText;
+    const currentValue = displayElement ? displayElement.innerText : '';
 
     title.innerText = `Edit ${field.charAt(0).toUpperCase() + field.slice(1)}`;
     input.value = (currentValue.includes('No ') || currentValue === 'Loading...') ? '' : currentValue;
-    
     modal.classList.remove('hidden');
     input.focus();
 }
 
-function closeModal() {
+window.closeModal = function() {
     document.getElementById('editModal').classList.add('hidden');
 }
 
 document.getElementById('saveBtn').onclick = async () => {
-    const newValue = document.getElementById('modalInput').value;
-    const endpoint = `/api/${currentEditingField}`; 
-    
+    const newValue = document.getElementById('modalInput').value.trim();
     try {
-        const res = await API.post(endpoint, { 
-            [currentEditingField]: newValue 
-        });
-
-        if (res.ok || res.message) {
-            showToast('Profile updated');
-            closeModal();
-            loadProfile();
-
-            // Special handling for name in case it's ever added to this page
-            if (currentEditingField === 'name') {
-                const user = User.get();
-                user.name = newValue;
-                User.set(user);
-            }
-        } else {
-            showToast('Error saving changes');
-        }
+        await update(ref(db, 'users/' + targetId), { [currentEditingField]: newValue });
+        showToast('Profile updated');
+        closeModal();
+        loadProfile();
     } catch (err) {
         showToast('Error saving changes');
     }
 };
 
-async function logout() {
+window.logout = async function() {
     if (confirm("Logout from QuickMsg?")) {
-        await API.post('/api/logout', {});
         User.clear();
-        window.location.href = '/index.html';
     }
 }
 
 function showToast(msg) {
     const toast = document.getElementById('toast');
+    if (!toast) return;
     toast.innerText = msg;
     toast.classList.replace('opacity-0', 'opacity-100');
     toast.classList.replace('translate-y-5', 'translate-y-0');
@@ -141,5 +123,4 @@ function showToast(msg) {
     }, 3000);
 }
 
-// Initial Load
 loadProfile();

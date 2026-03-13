@@ -1,28 +1,35 @@
+
+import { db, ref, onValue, get, push, set, remove, serverTimestamp } from './firebase-config.js';
+
 const callsList = document.getElementById('calls-list');
-// socket is now initialized in api.js
 const deleteModal = document.getElementById('delete-modal');
 const confirmDeleteBtn = document.getElementById('confirm-delete-btn');
+
+const currentUser = User.get();
+if (!currentUser) window.location.href = '/index.html';
 
 let longPressTimer;
 let currentDeleteId = null;
 
 async function loadCalls() {
-    try {
-        const res = await API.get('/api/calls');
-        if (!res.calls || res.calls.length === 0) {
+    const callsRef = ref(db, 'calls/' + currentUser.id);
+    onValue(callsRef, async (snapshot) => {
+        const callsData = snapshot.val();
+        if (!callsData) {
             callsList.innerHTML = `
                 <div class="flex flex-col items-center justify-center p-12 text-gray-400">
                     <div class="w-20 h-20 bg-gray-100 rounded-full flex items-center justify-center mb-4">
                         <i class="fas fa-phone-slash text-3xl"></i>
                     </div>
                     <p class="font-medium">No call logs yet</p>
-                    <p class="text-xs">Your call history will appear here.</p>
                 </div>
             `;
             return;
         }
 
-        callsList.innerHTML = res.calls.map(call => {
+        const callLogs = Object.values(callsData).sort((a, b) => b.time - a.time);
+        
+        callsList.innerHTML = callLogs.map(call => {
             const isMissed = call.status === 'missed';
             const isOutgoing = call.direction === 'outgoing';
             const statusIcon = isOutgoing 
@@ -35,17 +42,15 @@ async function loadCalls() {
 
             return `
                 <div class="p-4 flex items-center justify-between hover:bg-gray-50 active:bg-gray-100 transition-all cursor-pointer select-none"
-                     onmousedown="startLongPress(${call.id})" 
-                     onmouseup="endLongPress()" 
-                     onmouseleave="endLongPress()"
-                     ontouchstart="startLongPress(${call.id})"
-                     ontouchend="endLongPress()">
+                     onmousedown="startLongPress('${call.id}')" 
+                     ontouchstart="startLongPress('${call.id}')"
+                     onclick="window.location.href='chat.html?id=${call.peerId}&name=${encodeURIComponent(call.peerName)}'">
                     <div class="flex items-center space-x-3">
                         <div class="w-12 h-12 bg-blue-100 rounded-full flex items-center justify-center text-blue-600 font-bold overflow-hidden">
-                            ${call.avatar ? `<img src="${call.avatar}" class="w-full h-full object-cover">` : call.name[0].toUpperCase()}
+                            ${call.peerAvatar && call.peerAvatar !== 'default.png' ? `<img src="${call.peerAvatar}" class="w-full h-full object-cover">` : (call.peerName || 'U')[0]}
                         </div>
                         <div>
-                            <h3 class="font-semibold text-gray-800 ${isMissed && !isOutgoing ? 'text-red-600' : ''}">${call.name}</h3>
+                            <h3 class="font-semibold text-gray-800 ${isMissed && !isOutgoing ? 'text-red-600' : ''}">${call.peerName}</h3>
                             <div class="flex items-center text-xs text-gray-500">
                                 ${statusIcon}
                                 <span>${utils.formatTime(call.time)}</span>
@@ -58,60 +63,24 @@ async function loadCalls() {
                 </div>
             `;
         }).join('');
-    } catch (e) {
-        console.error("Load calls fetch error:", e);
-        callsList.innerHTML = `
-            <div class="p-8 text-center text-red-500">
-                <i class="fas fa-exclamation-circle text-2xl mb-2"></i>
-                <p>Error loading call history</p>
-                <button onclick="loadCalls()" class="mt-4 text-xs bg-red-100 text-red-600 px-3 py-1 rounded-full px-4 py-2 font-bold uppercase transition-all">Retry</button>
-            </div>
-        `;
-    }
+    });
 }
 
-function startLongPress(id) {
+window.startLongPress = function(id) {
     longPressTimer = setTimeout(() => {
-        showDeleteModal(id);
+        currentDeleteId = id;
+        deleteModal.classList.remove('hidden');
     }, 600);
 }
 
-function endLongPress() {
+window.endLongPress = function() {
     clearTimeout(longPressTimer);
-}
-
-function showDeleteModal(id) {
-    currentDeleteId = id;
-    deleteModal.classList.remove('hidden');
-}
-
-function closeDeleteModal() {
-    deleteModal.classList.add('hidden');
-    currentDeleteId = null;
 }
 
 confirmDeleteBtn.onclick = async () => {
     if (!currentDeleteId) return;
-    try {
-        await API.post('/api/delete-call', { id: currentDeleteId });
-        socket.emit('callUpdate', { to: User.get().id });
-        closeDeleteModal();
-        loadCalls();
-    } catch (e) {
-        console.error(e);
-    }
+    await remove(ref(db, `calls/${currentUser.id}/${currentDeleteId}`));
+    deleteModal.classList.add('hidden');
 };
 
-// Initial Load
 loadCalls();
-
-// Real-time updates
-socket.on('callUpdate', () => {
-    loadCalls();
-});
-
-// Register user for socket
-const user = User.get();
-if (user) {
-    socket.emit('register', user.id);
-}

@@ -1,0 +1,43 @@
+
+{
+  "rules": {
+    "users": {
+      ".read": "auth != null",
+      "$uid": {
+        ".write": "$uid === auth.uid"
+      }
+    },
+    "chats": {
+      "$uid": {
+        ".read": "$uid === auth.uid",
+        ".write": "$uid === auth.uid"
+      }
+    },
+    "messages": {
+      "$chatId": {
+        ".read": "auth != null",
+        ".write": "auth != null"
+      }
+    },
+    "typing": {
+      ".read": "auth != null",
+      ".write": "auth != null"
+    },
+    "stories": {
+      ".read": "auth != null",
+      ".write": "auth != null"
+    },
+    "calls": {
+      "$uid": {
+        ".read": "$uid === auth.uid",
+        ".write": "auth != null"
+      }
+    },
+    "status": {
+      ".read": "auth != null",
+      "$uid": {
+        ".write": "$uid === auth.uid"
+      }
+    }
+  }
+}

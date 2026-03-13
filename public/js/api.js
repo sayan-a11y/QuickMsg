@@ -1,93 +1,149 @@
-const socket = typeof io !== 'undefined' ? io() : null;
 
-if (socket) {
-    socket.on('connect', () => {
-        const user = User.get();
-        if (user && user.id) {
-            console.log("Socket connected, registering user:", user.id);
-            socket.emit('register', user.id);
-        }
-    });
+import { auth, db, storage, ref, set, get, onValue, push, update, remove, query, orderByChild, equalTo, serverTimestamp, sRef, uploadBytes, getDownloadURL } from './firebase-config.js';
+import { onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
+import { onDisconnect } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-database.js";
 
-    socket.on('connect_error', (error) => {
-        console.error("Socket Connection Error:", error);
-    });
+// Global exports
+window.auth = auth;
+window.db = db;
+window.storage = storage;
+
+// Initialize Socket if available
+if (typeof io !== 'undefined') {
+    window.socket = io();
 }
-const API = {
-    async get(url) {
-        const res = await fetch(url);
-        if (res.status === 401) window.location.href = '/index.html';
-        return res.json();
-    },
-    async post(url, body, isFormData = false) {
-        const options = {
-            method: 'POST',
-            body: isFormData ? body : JSON.stringify(body)
-        };
-        if (!isFormData) {
-            options.headers = { 'Content-Type': 'application/json' };
-        }
-        const res = await fetch(url, options);
-        if (res.status === 401) window.location.href = '/index.html';
-        return res.json();
-    },
-    async put(url, body) {
-        const res = await fetch(url, {
-            method: 'PUT',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(body)
-        });
-        if (res.status === 401) window.location.href = '/index.html';
-        return res.json();
-    }
-};
 
 const User = {
     get() {
-        return JSON.parse(localStorage.getItem('user'));
+        const local = localStorage.getItem('user');
+        return local ? JSON.parse(local) : null;
     },
     set(data) {
         localStorage.setItem('user', JSON.stringify(data));
     },
     clear() {
         localStorage.removeItem('user');
+        auth.signOut();
         window.location.href = '/index.html';
     }
 };
 
-const utils = {
-    formatTime(dateStr) {
-        if (!dateStr) return "";
-        let ds = dateStr.toString().replace(' ', 'T');
-        if (ds.length > 10 && !ds.includes('Z') && !ds.includes('+')) ds += 'Z';
-        const date = new Date(ds);
-        if (isNaN(date.getTime())) return "";
-        return date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-    },
-    formatLastSeen(dateStr) {
-        if (!dateStr) return "Offline";
-        let ds = dateStr.toString().replace(' ', 'T');
-        if (ds.length > 10 && !ds.includes('Z') && !ds.includes('+')) ds += 'Z';
-        const date = new Date(ds);
-        if (isNaN(date.getTime())) return "Offline";
+window.User = User;
 
-        const now = new Date();
-        const diffInSeconds = Math.floor((now - date) / 1000);
+// Track online status globally using the 'status' node
+onAuthStateChanged(auth, async (user) => {
+    if (user) {
+        // Fetch user profile from 'users' node
+        const userRef = ref(db, 'users/' + user.uid);
+        onValue(userRef, (snapshot) => {
+            if (snapshot.exists()) {
+                const userData = snapshot.val();
+                User.set({ ...userData, id: user.uid });
+            } else {
+                // If profile missing, set minimal data
+                const minimal = { id: user.uid, email: user.email, name: user.displayName || 'User' };
+                User.set(minimal);
+            }
+        });
 
-        if (diffInSeconds < 60) return "Just now";
-        if (diffInSeconds < 3600) return Math.floor(diffInSeconds / 60) + "m ago";
+        // Online status in 'status' node
+        const statusRef = ref(db, 'status/' + user.uid);
+        set(statusRef, {
+            online: true,
+            lastSeen: serverTimestamp()
+        });
+
+        onDisconnect(statusRef).set({
+            online: false,
+            lastSeen: serverTimestamp()
+        });
+
+        if (window.socket) window.socket.emit('register', user.uid);
+    } else {
+        const path = window.location.pathname;
+        if (!path.endsWith('index.html') && path !== '/' && !path.includes('/api/')) {
+            window.location.href = '/index.html';
+        }
+    }
+});
+
+const API = {
+    // Messaging using the 'messages' node
+    async sendMessage(to, text, file = null, fileType = null, replyTo = null) {
+        const user = User.get();
+        if (!user) return;
+
+        const chatId = user.id < to ? `${user.id}_${to}` : `${to}_${user.id}`;
+        // Use 'messages' node as requested
+        const msgRef = push(ref(db, `messages/${chatId}`));
+        const msgId = msgRef.key;
         
-        const isToday = date.toDateString() === now.toDateString();
-        if (isToday) {
-            return "at " + this.formatTime(dateStr);
-        }
+        const msgData = {
+            id: msgId,
+            senderId: user.id,
+            receiverId: to,
+            text: text || '',
+            time: serverTimestamp(),
+            seen: false,
+            deleted: false
+        };
 
-        const yesterday = new Date();
-        yesterday.setDate(now.getDate() - 1);
-        if (date.toDateString() === yesterday.toDateString()) {
-            return "yesterday at " + this.formatTime(dateStr);
+        if (file) {
+            msgData.file = file;
+            msgData.fileType = fileType;
         }
+        if (replyTo) msgData.replyTo = replyTo;
 
-        return date.toLocaleDateString() + " at " + this.formatTime(dateStr);
+        await set(msgRef, msgData);
+        
+        // Update chats index for Home page
+        const summary = {
+            lastMessage: text || (file ? 'Media' : ''),
+            time: serverTimestamp(),
+            unread: 0
+        };
+        update(ref(db, `chats/${user.id}/${to}`), summary);
+        
+        const rxRef = ref(db, `chats/${to}/${user.id}`);
+        const rxSnap = await get(rxRef);
+        const rxUnread = (rxSnap.val()?.unread || 0) + 1;
+        update(rxRef, { ...summary, unread: rxUnread });
+
+        return msgId;
+    },
+
+    async uploadFile(file, path) {
+        const storageRef = sRef(storage, path + '/' + Date.now() + '_' + file.name);
+        const snapshot = await uploadBytes(storageRef, file);
+        return await getDownloadURL(snapshot.ref);
+    },
+
+    setTyping(to, isTyping) {
+        const user = User.get();
+        if (!user) return;
+        set(ref(db, `typing/${to}/${user.id}`), isTyping);
     }
 };
+
+window.API = API;
+
+const utils = {
+    formatTime(timestamp) {
+        if (!timestamp) return "";
+        const date = new Date(timestamp);
+        return date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+    },
+    formatLastSeen(timestamp) {
+        if (!timestamp) return "Never";
+        const date = new Date(timestamp);
+        const now = new Date();
+        const diff = (now - date) / 1000;
+
+        if (diff < 60) return "Just now";
+        if (diff < 3600) return Math.floor(diff / 60) + "m ago";
+        if (date.toDateString() === now.toDateString()) return "Today at " + this.formatTime(timestamp);
+        return date.toLocaleDateString();
+    }
+};
+
+window.utils = utils;

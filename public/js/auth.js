@@ -1,3 +1,11 @@
+
+import { auth, db, ref, set, get, serverTimestamp } from './firebase-config.js';
+import { 
+    signInWithEmailAndPassword, 
+    createUserWithEmailAndPassword, 
+    onAuthStateChanged
+} from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
+
 let isLogin = true;
 
 const authForm = document.getElementById('auth-form');
@@ -6,7 +14,7 @@ const authSubtitle = document.getElementById('auth-subtitle');
 const authBtn = document.getElementById('auth-btn');
 const toggleAuthText = document.getElementById('toggle-auth');
 
-function toggleAuth() {
+window.toggleAuth = function() {
     isLogin = !isLogin;
     if (isLogin) {
         signupFields.classList.add('hidden');
@@ -21,43 +29,68 @@ function toggleAuth() {
     }
 }
 
-authForm.addEventListener('submit', async (e) => {
-    e.preventDefault();
-    const username = document.getElementById('username').value;
-    const password = document.getElementById('password').value;
-    const name = document.getElementById('name') ? document.getElementById('name').value : null;
-    const email = document.getElementById('email') ? document.getElementById('email').value : null;
-
-    const url = isLogin ? '/api/login' : '/api/signup';
-    const body = isLogin ? { username, password } : { name, username, email, password };
-
-    try {
-        const res = await fetch(url, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(body)
-        });
-        const data = await res.json();
-        if (res.ok) {
-            localStorage.setItem('user', JSON.stringify(data.user));
+// Redirect if already logged in and data is fetched
+onAuthStateChanged(auth, async (user) => {
+    if (user) {
+        const userRef = ref(db, 'users/' + user.uid);
+        const snapshot = await get(userRef);
+        if (snapshot.exists()) {
+            localStorage.setItem('user', JSON.stringify({ ...snapshot.val(), id: user.uid }));
             window.location.href = '/home.html';
         } else {
-            alert(data.message || 'Login failed');
+            // Wait for DB write if it's a new user
+            console.log("Waiting for user profile creation...");
         }
-    } catch (err) {
-        console.error('Auth error:', err);
-        alert('An error occurred. Check browser console.');
     }
 });
 
-// Check if already logged in
-async function checkLoggedIn() {
-    const res = await fetch('/api/me');
-    if (res.ok) {
-        const data = await res.json();
-        localStorage.setItem('user', JSON.stringify(data.user));
-        window.location.href = '/home.html';
-    }
-}
+authForm.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const emailInput = document.getElementById('email');
+    const usernameInput = document.getElementById('username');
+    const passwordInput = document.getElementById('password');
+    const nameInput = document.getElementById('name');
 
-checkLoggedIn();
+    // Email fallback if only username provided
+    const emailValue = emailInput.value || (usernameInput.value.includes('@') ? usernameInput.value : usernameInput.value + "@quickmsg.com");
+    const password = passwordInput.value;
+
+    authBtn.disabled = true;
+    authBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Loading...';
+
+    try {
+        if (isLogin) {
+            await signInWithEmailAndPassword(auth, emailValue, password);
+        } else {
+            const name = nameInput.value;
+            const username = usernameInput.value;
+            const userCredential = await createUserWithEmailAndPassword(auth, emailValue, password);
+            const user = userCredential.user;
+
+            // Save user to 'users' node
+            const userProfile = {
+                id: user.uid,
+                name: name,
+                username: username,
+                email: emailValue,
+                avatar: 'default.png',
+                about: 'Hey there! I am using QuickMsg.'
+            };
+            await set(ref(db, 'users/' + user.uid), userProfile);
+
+            // Initialize 'status' node
+            await set(ref(db, 'status/' + user.uid), {
+                online: true,
+                lastSeen: serverTimestamp()
+            });
+
+            localStorage.setItem('user', JSON.stringify(userProfile));
+            window.location.href = '/home.html';
+        }
+    } catch (error) {
+        console.error('Auth error:', error);
+        alert(error.message);
+        authBtn.disabled = false;
+        authBtn.innerHTML = isLogin ? 'Login' : 'Sign Up';
+    }
+});

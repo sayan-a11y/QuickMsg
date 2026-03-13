@@ -1,3 +1,6 @@
+
+import { db, storage, ref, push, set, serverTimestamp } from './firebase-config.js';
+
 const currentUser = User.get();
 if (!currentUser) window.location.href = '/index.html';
 
@@ -11,7 +14,6 @@ const sendBtn = document.getElementById('send-btn');
 
 let selectedFile = null;
 
-// Handle file selection
 fileInput.addEventListener('change', (e) => {
     const file = e.target.files[0];
     if (!file) return;
@@ -19,7 +21,6 @@ fileInput.addEventListener('change', (e) => {
     selectedFile = file;
     const url = URL.createObjectURL(file);
 
-    // Reset views
     previewVid.pause();
     previewImg.classList.add('hidden');
     previewVid.classList.add('hidden');
@@ -37,34 +38,37 @@ fileInput.addEventListener('change', (e) => {
     previewUi.classList.remove('hidden');
 });
 
-// Auto trigger file selector on load
-window.onload = () => {
-    // Attempting auto-click, some browsers may prevent it without user gesture.
-    // However, the button in the UI acts as a fallback.
-    fileInput.click();
-};
-
-async function uploadStatus() {
+window.uploadStatus = async () => {
     if (!selectedFile) return;
 
-    // Start Loading Spin
-    const ogIcon = sendBtn.innerHTML;
-    sendBtn.innerHTML = '<i class="fas fa-spinner fa-spin text-xl translate-x-[-1px] translate-y-[1px]"></i>';
     sendBtn.disabled = true;
-
-    const formData = new FormData();
-    formData.append('status_file', selectedFile);
-    formData.append('caption', captionInput.value.trim());
+    sendBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i>';
 
     try {
-        await API.post('/api/status', formData, true);
-        const socket = io();
-        socket.emit("statusUpdate");
+        // Upload to Storage
+        const fileUrl = await API.uploadFile(selectedFile, 'stories/' + currentUser.id);
+        
+        // Save to RTDB
+        const storyRef = push(ref(db, 'stories'));
+        await set(storyRef, {
+            id: storyRef.key,
+            userId: currentUser.id,
+            userName: currentUser.name || currentUser.username,
+            userAvatar: currentUser.avatar || 'default.png',
+            file: fileUrl,
+            fileType: selectedFile.type,
+            caption: captionInput.value.trim(),
+            time: serverTimestamp(),
+            views: {}
+        });
+
         window.location.href = 'status.html';
     } catch (err) {
-        console.error("Status upload error", err);
-        alert("Failed to share status, check internet connection.");
-        sendBtn.innerHTML = ogIcon;
+        console.error("Story upload error:", err);
+        alert("Failed to share story.");
         sendBtn.disabled = false;
+        sendBtn.innerHTML = '<i class="fas fa-paper-plane"></i>';
     }
-}
+};
+
+sendBtn.onclick = window.uploadStatus;

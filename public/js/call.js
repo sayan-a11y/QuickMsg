@@ -1,3 +1,6 @@
+
+import { db, ref, get } from './firebase-config.js';
+
 const callName = document.getElementById('callName');
 const callStatus = document.getElementById('callStatus');
 const callTimer = document.getElementById('callTimer');
@@ -16,17 +19,19 @@ let muted = false;
 let videoOff = false;
 let speakerOn = true;
 
-// Load User Info
+const currentUser = User.get();
+
 async function loadTargetUser() {
     if (!targetUserId) {
         callName.innerText = "Unknown User";
         return null;
     }
     try {
-        const res = await API.get(`/api/user/${targetUserId}`);
-        if (res && res.user) {
-            callName.innerText = res.user.name;
-            return res.user;
+        const userSnap = await get(ref(db, 'users/' + targetUserId));
+        if (userSnap.exists()) {
+            const user = userSnap.val();
+            callName.innerText = user.name || user.username || "User";
+            return user;
         } else {
             callName.innerText = "Unknown User";
             callStatus.innerText = "Invalid user ID";
@@ -39,7 +44,6 @@ async function loadTargetUser() {
     }
 }
 
-// Timer setup
 window.startTimer = function() {
     if (timerInterval) return;
     seconds = 0;
@@ -51,7 +55,6 @@ window.startTimer = function() {
     }, 1000);
 };
 
-// UI Toggles
 window.toggleMute = () => {
     if (!window.localStream) return;
     muted = !muted;
@@ -73,24 +76,20 @@ window.toggleSpeaker = () => {
     speakerBtn.classList.toggle('active', !speakerOn);
 };
 
-// Initialize
 async function initCall() {
     await loadTargetUser();
 
-    // Set globally for webrtc.js context identification
     window.contactId = targetUserId;
     window.contactName = callName.innerText;
 
     if (!isIncoming) {
-        // STEP 1 & 2 & 13
         callStatus.innerText = "Calling...";
-        window.startCall(callType);
+        if (window.startCall) window.startCall(callType);
     } else {
         callStatus.innerText = "Connecting...";
     }
 }
 
-// Override the global setStatus from webrtc.js to update call.html elements
 window.setStatus = (text) => {
     if (callStatus) callStatus.innerText = text;
     if (text === "Connected") window.startTimer();
@@ -98,8 +97,10 @@ window.setStatus = (text) => {
 
 document.addEventListener('DOMContentLoaded', initCall);
 
-// Cleanup on leave
 window.onbeforeunload = () => {
     if (timerInterval) clearInterval(timerInterval);
-    window.endCall();
+    if (window.endCall) window.endCall();
 };
+
+// Export to window for HTML onclicks
+window.initCall = initCall;

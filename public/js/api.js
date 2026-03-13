@@ -10,6 +10,7 @@ window.db = db;
 window.storage = storage;
 window.limitToLast = limitToLast;
 window.query = query;
+window.increment = increment;
 
 // Firebase Client-side API
 const APP_URL = window.location.origin;

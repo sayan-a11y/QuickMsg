@@ -11,7 +11,9 @@
     "chats": {
       "$uid": {
         ".read": "$uid === auth.uid",
-        ".write": "$uid === auth.uid"
+        "$otherId": {
+          ".write": "auth.uid === $uid || auth.uid === $otherId"
+        }
       }
     },
     "messages": {

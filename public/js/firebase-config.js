@@ -3,7 +3,7 @@ import { initializeApp, getApps, getApp } from "https://www.gstatic.com/firebase
 import { 
     getDatabase, ref, set, get, onValue, push, update, remove, 
     query, orderByChild, equalTo, serverTimestamp, onDisconnect,
-    startAt, endAt 
+    startAt, endAt, limitToLast 
 } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-database.js";
 import { getStorage, ref as sRef, uploadBytes, getDownloadURL } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-storage.js";
 import { getAuth, signInWithEmailAndPassword, createUserWithEmailAndPassword, onAuthStateChanged, signOut, setPersistence, browserLocalPersistence } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
@@ -34,7 +34,7 @@ console.log("Firebase initialized successfully on:", window.location.hostname);
 
 export { 
     app, db, storage, auth, 
-    ref, set, get, onValue, push, update, remove, query, orderByChild, equalTo, serverTimestamp, onDisconnect, startAt, endAt,
+    ref, set, get, onValue, push, update, remove, query, orderByChild, equalTo, serverTimestamp, onDisconnect, startAt, endAt, limitToLast,
     sRef, uploadBytes, getDownloadURL,
     signInWithEmailAndPassword, createUserWithEmailAndPassword, onAuthStateChanged, signOut
 };

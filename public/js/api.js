@@ -8,6 +8,8 @@ import {
 window.auth = auth;
 window.db = db;
 window.storage = storage;
+window.limitToLast = limitToLast;
+window.query = query;
 
 // Firebase Client-side API
 const APP_URL = window.location.origin;

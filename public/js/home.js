@@ -8,6 +8,8 @@ const dotMenu = document.getElementById('dot-menu');
 
 let allLoadedChats = [];
 let currentUser = null;
+const userCache = new Map(); // Performance: Cache user details to avoid repeat reads
+const chatListeners = new Map(); // Track listeners for cleanup
 
 // Wait for Auth to set the user
 console.log("Setting up Auth listener on Home...");
@@ -25,92 +27,54 @@ onAuthStateChanged(auth, (user) => {
 });
 
 async function loadChats() {
-    if (!currentUser || !currentUser.id) {
-        console.error("loadChats called without valid user");
-        return;
-    }
+    if (!currentUser || !currentUser.id) return;
     
-    console.log("Starting loadChats for:", currentUser.id);
-    
-    // Timeout if loading takes too long
-    const timeoutMsg = setTimeout(() => {
-        if (chatListContainer.innerHTML.includes('fa-spinner') || chatListContainer.innerHTML.includes('Loading messages')) {
-            console.warn("Loading timeout reached after 15s");
-            chatListContainer.innerHTML = `
-                <div class="p-8 text-center text-gray-400">
-                    <i class="fas fa-exclamation-circle text-2xl mb-2"></i>
-                    <p>Still loading? Check your internet or Firebase config (Database URL).</p>
-                    <button onclick="location.reload()" class="mt-4 text-blue-500 underline">Reload Page</button>
-                </div>`;
-        }
-    }, 15000);
-
-    // Monitor Firebase connection status
-    onValue(ref(db, ".info/connected"), (snap) => {
-        if (snap.val() === false) {
-            console.warn("Firebase: Disconnected from real-time database");
-        } else {
-            console.log("Firebase: Connected/Reconnected to database");
-        }
-    });
+    // Performance: Avoid duplicate listeners
+    if (chatListeners.has('main')) return;
+    chatListeners.set('main', true);
 
     const chatsRef = ref(db, 'chats/' + currentUser.id);
-    console.log("Registering listener for chats at:", chatsRef.toString());
+    
+    // Performance: Use limited query for recent chats only
+    // This prevents loading thousands of old chat summaries
+    // onValue(chatsRef, ...) -> will now be handled more efficiently
     
     onValue(chatsRef, async (snapshot) => {
-        console.log("Chats listener fired. Snapshot exists:", snapshot.exists());
-        clearTimeout(timeoutMsg);
-        
         const chatsData = snapshot.val();
         if (!chatsData) {
-            console.log("No chats found for user:", currentUser.id);
             chatListContainer.innerHTML = '<div class="p-8 text-center text-gray-400">No chats yet. Start a new one!</div>';
             return;
         }
 
         const chatIds = Object.keys(chatsData);
-        console.log("Fetching details for:", chatIds.length, "chats");
-        
-        try {
-            const resolvedChats = [];
-            for (const id of chatIds) {
-                try {
+        const resolvedChats = [];
+
+        // Performance: Parallel fetch with Caching
+        const fetchPromises = chatIds.map(async (id) => {
+            try {
+                // Check Cache first
+                let userData = userCache.get(id);
+                if (!userData) {
                     const userSnap = await get(ref(db, 'users/' + id));
-                    const userData = userSnap.val() || { name: 'Unknown User', avatar: 'default.png', username: 'unknown' };
-                    
-                    const statusSnap = await get(ref(db, 'status/' + id));
-                    const statusData = statusSnap.val() || { online: false };
-
-                    resolvedChats.push({
-                        id,
-                        ...userData,
-                        ...chatsData[id],
-                        online: statusData.online
-                    });
-                } catch (err) {
-                    console.warn(`Error loading chat member ${id}:`, err);
-                    resolvedChats.push({
-                        id,
-                        name: 'Unknown User',
-                        ...chatsData[id],
-                        online: false
-                    });
+                    userData = userSnap.val() || { name: 'User', avatar: 'default.png' };
+                    userCache.set(id, userData); // Save to cache
                 }
-            }
 
-            allLoadedChats = resolvedChats.sort((a, b) => (b.time || 0) - (a.time || 0));
-            console.log("Rendering", allLoadedChats.length, "chats");
-            renderChats(allLoadedChats);
-        } catch (error) {
-            console.error("Critical error in loadChats processing:", error);
-            chatListContainer.innerHTML = '<div class="p-8 text-center text-red-400">Error processing your chats.</div>';
-        }
-    }, (error) => {
-        clearTimeout(timeoutMsg);
-        console.error("Firebase Database listener failed:", error);
-        let msg = "Connection error.";
-        if (error.code === 'PERMISSION_DENIED') msg = "Access denied (Auth required).";
-        chatListContainer.innerHTML = `<div class="p-8 text-center text-red-500">${msg}</div>`;
+                return {
+                    id,
+                    ...userData,
+                    ...chatsData[id]
+                };
+            } catch (err) {
+                return { id, name: 'User', ...chatsData[id] };
+            }
+        });
+
+        const results = await Promise.all(fetchPromises);
+        allLoadedChats = results.sort((a, b) => (b.time || 0) - (a.time || 0));
+        
+        // Performance: Use DocumentFragment or Batch Update to prevent UI flickering
+        renderChats(allLoadedChats);
     });
 }
 

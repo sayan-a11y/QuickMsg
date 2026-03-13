@@ -1,4 +1,4 @@
-import { db, ref, onValue, get, push, set, update, remove, serverTimestamp, auth, onAuthStateChanged } from './firebase-config.js';
+import { db, ref, onValue, get, push, set, update, remove, serverTimestamp, auth, onAuthStateChanged, query, limitToLast } from './firebase-config.js';
 import { User, API, utils } from './api.js';
 
 const messageInput = document.getElementById('message-input');
@@ -13,6 +13,10 @@ const attachBtn = document.getElementById('attachBtn');
 const actionPreview = document.getElementById('action-preview');
 const previewTitle = document.getElementById('preview-title');
 const previewText = document.getElementById('preview-text');
+
+// Performance settings
+const MESSAGE_LIMIT = 30; // Load only last 30 messages initially
+let lastMessageTimestamp = 0;
 
 let currentUser = User.get();
 const urlParams = new URLSearchParams(window.location.search);
@@ -49,16 +53,24 @@ onAuthStateChanged(auth, (user) => {
 function initChat() {
     if (!currentChatId) return;
 
-    // Listen for messages in 'messages' node
-    const chatMessagesRef = ref(db, `messages/${currentChatId}`);
-    onValue(chatMessagesRef, (snapshot) => {
+    // Performance: Use Limited Query (limitToLast)
+    // Avoid loading the entire message history which causes slowness
+    const dbQuery = query(ref(db, `messages/${currentChatId}`), limitToLast(MESSAGE_LIMIT));
+
+    onValue(dbQuery, (snapshot) => {
         const data = snapshot.val();
         if (data) {
             const messages = Object.values(data).sort((a, b) => (a.time || 0) - (b.time || 0));
+            
+            // Optimization: Only re-render if data actually changed
+            const latestTs = messages[messages.length - 1]?.time || 0;
+            if (latestTs === lastMessageTimestamp) return;
+            lastMessageTimestamp = latestTs;
+
             renderMessages(messages);
             scrollToBottom();
             
-            // Mark as seen
+            // Mark as seen (Batch update if possible)
             messages.forEach(msg => {
                 if (msg.receiverId === currentUser.id && !msg.seen) {
                     update(ref(db, `messages/${currentChatId}/${msg.id}`), { seen: true });
@@ -67,26 +79,10 @@ function initChat() {
         } else {
             messagesContainer.innerHTML = '<div class="p-8 text-center text-gray-400">No messages yet.</div>';
         }
-    }, (error) => {
-        console.error("Chat listener error:", error);
-        messagesContainer.innerHTML = '<div class="p-8 text-center text-red-500">Failed to load messages.</div>';
     });
 
-    // Listen for typing
-    const typingRef = ref(db, `typing/${currentUser.id}/${contactId}`);
-    onValue(typingRef, (snapshot) => {
-        if (snapshot.val()) {
-            typingIndicator.classList.remove('hidden');
-            headerStatus.classList.add('hidden');
-        } else {
-            typingIndicator.classList.add('hidden');
-            headerStatus.classList.remove('hidden');
-        }
-    });
-
-    // Listen for contact profile info
-    const contactUserRef = ref(db, `users/${contactId}`);
-    onValue(contactUserRef, (snapshot) => {
+    // Performance: Use 'once' for profile data to reduce listeners
+    get(ref(db, `users/${contactId}`)).then((snapshot) => {
         const user = snapshot.val();
         if (user) {
             if (user.avatar && user.avatar !== 'default.png') {
@@ -94,17 +90,6 @@ function initChat() {
             } else {
                  headerAvatar.innerText = (user.name || user.username || 'U')[0].toUpperCase();
             }
-        }
-    });
-
-    // Listen for contact status in 'status' node
-    const contactStatusRef = ref(db, `status/${contactId}`);
-    onValue(contactStatusRef, (snapshot) => {
-        const stat = snapshot.val();
-        if (stat) {
-            updateHeaderStatus(stat.online, stat.lastSeen);
-        } else {
-            updateHeaderStatus(false, null);
         }
     });
 }

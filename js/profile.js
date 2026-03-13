@@ -1,9 +1,19 @@
+import { db, ref, get, update, auth, onAuthStateChanged } from './firebase-config.js';
+import { User, API } from './api.js';
 
-import { db, ref, get, update } from './firebase-config.js';
+let currentUser = User.get();
+let userId = currentUser?.id;
 
-const currentUser = User.get();
-if (!currentUser) window.location.href = '/index.html';
-const userId = currentUser.id;
+// Wait for Auth
+onAuthStateChanged(auth, (user) => {
+    if (user) {
+        currentUser = User.get() || { id: user.uid };
+        userId = user.uid;
+        loadUser();
+    } else {
+        window.location.href = '/index.html';
+    }
+});
 
 let currentEditingField = '';
 
@@ -96,4 +106,4 @@ function showToast(msg) {
     }, 3000);
 }
 
-loadUser();
+// loadUser is called inside onAuthStateChanged

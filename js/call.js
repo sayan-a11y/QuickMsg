@@ -1,5 +1,6 @@
 
 import { db, ref, get } from './firebase-config.js';
+import { User } from './api.js';
 
 const callName = document.getElementById('callName');
 const callStatus = document.getElementById('callStatus');

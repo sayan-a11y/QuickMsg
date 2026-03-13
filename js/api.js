@@ -1,19 +1,18 @@
 
-import { auth, db, storage, ref, set, get, onValue, push, update, remove, query, orderByChild, equalTo, serverTimestamp, sRef, uploadBytes, getDownloadURL } from './firebase-config.js';
-import { onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
-import { onDisconnect } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-database.js";
+import { 
+    auth, db, storage, ref, set, get, onValue, push, update, remove, query, orderByChild, equalTo, serverTimestamp, 
+    sRef, uploadBytes, getDownloadURL, onAuthStateChanged, onDisconnect 
+} from './firebase-config.js';
 
 // Global exports
 window.auth = auth;
 window.db = db;
 window.storage = storage;
 
-// Initialize Socket if available
-if (typeof io !== 'undefined') {
-    window.socket = io();
-}
+// Firebase Client-side API
+const APP_URL = window.location.origin;
 
-const User = {
+export const User = {
     get() {
         const local = localStorage.getItem('user');
         return local ? JSON.parse(local) : null;
@@ -24,7 +23,7 @@ const User = {
     clear() {
         localStorage.removeItem('user');
         auth.signOut();
-        window.location.href = '/index.html';
+        window.location.href = APP_URL + '/index.html';
     }
 };
 
@@ -58,16 +57,16 @@ onAuthStateChanged(auth, async (user) => {
             lastSeen: serverTimestamp()
         });
 
-        if (window.socket) window.socket.emit('register', user.uid);
     } else {
         const path = window.location.pathname;
-        if (!path.endsWith('index.html') && path !== '/' && !path.includes('/api/')) {
-            window.location.href = '/index.html';
+        // Protect all pages except index.html and root
+        if (path !== '/' && !path.includes('index.html')) {
+            window.location.href = APP_URL + '/index.html';
         }
     }
 });
 
-const API = {
+export const API = {
     // Messaging using the 'messages' node
     async sendMessage(to, text, file = null, fileType = null, replyTo = null) {
         const user = User.get();
@@ -127,7 +126,7 @@ const API = {
 
 window.API = API;
 
-const utils = {
+export const utils = {
     formatTime(timestamp) {
         if (!timestamp) return "";
         const date = new Date(timestamp);
@@ -147,3 +146,4 @@ const utils = {
 };
 
 window.utils = utils;
+export { APP_URL };

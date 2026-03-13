@@ -43,21 +43,5 @@ window.showNotification = function (title, body, url = '/') {
     }
 };
 
-// Global socket listeners for notifications in background
-if (typeof socket !== 'undefined') {
-    socket.on('receive_message', (msg) => {
-        // If we are on chat page and talking to that user, don't notify unless hidden
-        const isChatPage = window.location.pathname.includes('chat.html');
-        const isCurrentContact = typeof contactId !== 'undefined' && contactId === msg.sender_id;
-
-        if (!isChatPage || !isCurrentContact || document.hidden) {
-            // We need sender name, we might just have id. We could decode token or just use "New message"
-            showNotification('New Message', msg.text, `/chat.html?id=${msg.sender_id}`);
-        }
-    });
-
-    socket.on('incoming_call', (data) => {
-        // Data has {from, type, signalData}
-        showNotification('Incoming Call', `You have an incoming ${data.type} call.`, `/chat.html?id=${data.from}`);
-    });
-}
+// Real-time notifications are handled via Firebase listeners in individual pages
+// such as chat.js and home.js. This avoids legacy socket dependencies.

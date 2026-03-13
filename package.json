@@ -1,45 +1,9 @@
 {
   "name": "quickmsg",
-  "version": "1.0.0",
-  "description": "QuickMsg: A premium, fast, and secure messaging platform featuring real-time chats, status updates, and audio/video calls.",
-  "main": "server.js",
-  "author": "Sayan (sayan-a11y)",
-  "license": "MIT",
-  "repository": {
-    "type": "git",
-    "url": "git+https://github.com/sayan-a11y/QuickMsg.git"
-  },
-  "keywords": [
-    "messaging",
-    "chat",
-    "webrtc",
-    "socket.io",
-    "express",
-    "sqlite",
-    "real-time"
-  ],
-  "bugs": {
-    "url": "https://github.com/sayan-a11y/QuickMsg/issues"
-  },
-  "homepage": "https://github.com/sayan-a11y/QuickMsg#readme",
+  "version": "2.1.0",
+  "private": true,
   "scripts": {
-    "start": "node server.js",
-    "dev": "nodemon server.js"
-  },
-  "dependencies": {
-    "bcryptjs": "^2.4.3",
-    "better-sqlite3": "^12.6.2",
-    "cookie-parser": "^1.4.7",
-    "express": "^4.21.0",
-    "firebase": "^12.10.0",
-    "firebase-admin": "^13.7.0",
-    "jsonwebtoken": "^9.0.2",
-    "multer": "^1.4.5-lts.1",
-    "socket.io": "^4.8.0",
-    "sqlite3": "^5.1.7",
-    "uuid": "^10.0.0"
-  },
-  "devDependencies": {
-    "nodemon": "^3.1.14"
+    "start": "echo 'Run this with a static server like live-server'",
+    "build": "echo 'Deploying static files'"
   }
 }

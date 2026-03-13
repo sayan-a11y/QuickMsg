@@ -1,10 +1,18 @@
-
-import { db, ref, onValue, get, update, push, set, serverTimestamp, remove } from './firebase-config.js';
+import { db, ref, onValue, get, update, push, set, serverTimestamp, remove, auth, onAuthStateChanged } from './firebase-config.js';
+import { User, utils } from './api.js';
 
 const statusListContainer = document.getElementById('status-list');
-const currentUser = User.get();
+let currentUser = User.get();
 
-if (!currentUser) window.location.href = '/index.html';
+// Wait for Auth
+onAuthStateChanged(auth, (user) => {
+    if (user) {
+        currentUser = User.get() || { id: user.uid };
+        loadStatuses();
+    } else {
+        window.location.href = '/index.html';
+    }
+});
 
 // Elements
 const viewer = document.getElementById('status-viewer');
@@ -225,4 +233,4 @@ async function loadViewers(storyId) {
 window.showViewers = () => viewersSheet.classList.remove('translate-y-full');
 window.closeViewers = () => viewersSheet.classList.add('translate-y-full');
 
-loadStatuses();
+// loadStatuses is called inside onAuthStateChanged

@@ -1,5 +1,5 @@
-
-import { db, ref, onValue, get, push, set, update, remove, serverTimestamp } from './firebase-config.js';
+import { db, ref, onValue, get, push, set, update, remove, serverTimestamp, auth, onAuthStateChanged } from './firebase-config.js';
+import { User, API, utils } from './api.js';
 
 const messageInput = document.getElementById('message-input');
 const sendBtn = document.getElementById('send-btn');
@@ -14,22 +14,41 @@ const actionPreview = document.getElementById('action-preview');
 const previewTitle = document.getElementById('preview-title');
 const previewText = document.getElementById('preview-text');
 
-const currentUser = User.get();
+let currentUser = User.get();
 const urlParams = new URLSearchParams(window.location.search);
 const contactId = urlParams.get('id');
 const contactName = urlParams.get('name');
 
-if (!contactId || !currentUser) window.location.href = '/home.html';
-
-headerName.innerText = contactName || 'User';
-
 let isEditing = false;
 let editingMsgId = null;
 let replyToId = null;
-let currentChatId = currentUser.id < contactId ? `${currentUser.id}_${contactId}` : `${contactId}_${currentUser.id}`;
+let currentChatId = null;
+// Wait for Auth
+console.log("Setting up Auth listener on Chat...");
+onAuthStateChanged(auth, (user) => {
+    if (user) {
+        console.log("Auth resolved: User is logged in", user.uid);
+        // Use authenticated UID as source of truth
+        const localUser = User.get() || {};
+        currentUser = { ...localUser, id: user.uid };
+        if (!contactId) {
+            console.warn("No contact ID provided, going home");
+            window.location.href = './home.html';
+            return;
+        }
+        currentChatId = currentUser.id < contactId ? `${currentUser.id}_${contactId}` : `${contactId}_${currentUser.id}`;
+        headerName.innerText = contactName || 'User';
+        initChat();
+    } else {
+        console.log("Auth resolved: No user, going to login");
+        window.location.href = './index.html';
+    }
+});
 
 // Initialize chat
 function initChat() {
+    if (!currentChatId) return;
+
     // Listen for messages in 'messages' node
     const chatMessagesRef = ref(db, `messages/${currentChatId}`);
     onValue(chatMessagesRef, (snapshot) => {
@@ -48,6 +67,9 @@ function initChat() {
         } else {
             messagesContainer.innerHTML = '<div class="p-8 text-center text-gray-400">No messages yet.</div>';
         }
+    }, (error) => {
+        console.error("Chat listener error:", error);
+        messagesContainer.innerHTML = '<div class="p-8 text-center text-red-500">Failed to load messages.</div>';
     });
 
     // Listen for typing
@@ -262,4 +284,4 @@ messageInput.oninput = () => {
     }, 2000);
 };
 
-initChat();
+// initChat is called inside onAuthStateChanged

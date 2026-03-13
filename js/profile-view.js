@@ -1,5 +1,6 @@
 
 import { db, ref, get, update } from './firebase-config.js';
+import { User, API } from './api.js';
 
 const currentUser = User.get();
 if (!currentUser) window.location.href = '/index.html';

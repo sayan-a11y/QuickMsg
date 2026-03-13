@@ -41,9 +41,9 @@ function highlightActiveTab() {
     const page = path.split("/").pop();
 
     let activeId = "";
-    if (page === "home.html" || page === "" || page === "index.html") activeId = "nav-chats";
-    else if (page === "status.html") activeId = "nav-status";
-    else if (page === "call.html" || page === "calls.html") activeId = "nav-calls";
+    if (page.includes("home") || page === "" || page.includes("index") || page === "/") activeId = "nav-chats";
+    else if (page.includes("status")) activeId = "nav-status";
+    else if (page.includes("call")) activeId = "nav-calls";
 
     if (activeId) {
         const activeLink = document.getElementById(activeId);

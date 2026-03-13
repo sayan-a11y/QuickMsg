@@ -1,43 +1,116 @@
-
-import { db, ref, onValue, get, query, orderByChild, equalTo, startAt, endAt } from './firebase-config.js';
+import { db, ref, onValue, get, query, orderByChild, equalTo, startAt, endAt, auth, onAuthStateChanged } from './firebase-config.js';
+import { User, utils } from './api.js';
 
 const chatListContainer = document.getElementById('chat-list');
 const userSearchInput = document.getElementById('user-search');
 const menuBtn = document.getElementById('menu-btn');
 const dotMenu = document.getElementById('dot-menu');
-const currentUser = User.get();
-let allLoadedChats = [];
 
-if (!currentUser) window.location.href = '/index.html';
+let allLoadedChats = [];
+let currentUser = null;
+
+// Wait for Auth to set the user
+console.log("Setting up Auth listener on Home...");
+onAuthStateChanged(auth, (user) => {
+    if (user) {
+        console.log("Auth resolved: User is logged in", user.uid);
+        // Use the authenticated UID as the source of truth
+        const localUser = User.get() || {};
+        currentUser = { ...localUser, id: user.uid };
+        loadChats();
+    } else {
+        console.log("Auth resolved: No user found, redirecting to login");
+        window.location.href = './index.html';
+    }
+});
 
 async function loadChats() {
+    if (!currentUser || !currentUser.id) {
+        console.error("loadChats called without valid user");
+        return;
+    }
+    
+    console.log("Starting loadChats for:", currentUser.id);
+    
+    // Timeout if loading takes too long
+    const timeoutMsg = setTimeout(() => {
+        if (chatListContainer.innerHTML.includes('fa-spinner') || chatListContainer.innerHTML.includes('Loading messages')) {
+            console.warn("Loading timeout reached after 15s");
+            chatListContainer.innerHTML = `
+                <div class="p-8 text-center text-gray-400">
+                    <i class="fas fa-exclamation-circle text-2xl mb-2"></i>
+                    <p>Still loading? Check your internet or Firebase config (Database URL).</p>
+                    <button onclick="location.reload()" class="mt-4 text-blue-500 underline">Reload Page</button>
+                </div>`;
+        }
+    }, 15000);
+
+    // Monitor Firebase connection status
+    onValue(ref(db, ".info/connected"), (snap) => {
+        if (snap.val() === false) {
+            console.warn("Firebase: Disconnected from real-time database");
+        } else {
+            console.log("Firebase: Connected/Reconnected to database");
+        }
+    });
+
     const chatsRef = ref(db, 'chats/' + currentUser.id);
+    console.log("Registering listener for chats at:", chatsRef.toString());
+    
     onValue(chatsRef, async (snapshot) => {
+        console.log("Chats listener fired. Snapshot exists:", snapshot.exists());
+        clearTimeout(timeoutMsg);
+        
         const chatsData = snapshot.val();
         if (!chatsData) {
+            console.log("No chats found for user:", currentUser.id);
             chatListContainer.innerHTML = '<div class="p-8 text-center text-gray-400">No chats yet. Start a new one!</div>';
             return;
         }
 
         const chatIds = Object.keys(chatsData);
-        const resolvedChats = await Promise.all(chatIds.map(async (id) => {
-            const userSnap = await get(ref(db, 'users/' + id));
-            const userData = userSnap.val();
-            
-            // Fetch status separately from 'status' node
-            const statusSnap = await get(ref(db, 'status/' + id));
-            const statusData = statusSnap.val() || { online: false };
+        console.log("Fetching details for:", chatIds.length, "chats");
+        
+        try {
+            const resolvedChats = [];
+            for (const id of chatIds) {
+                try {
+                    const userSnap = await get(ref(db, 'users/' + id));
+                    const userData = userSnap.val() || { name: 'Unknown User', avatar: 'default.png', username: 'unknown' };
+                    
+                    const statusSnap = await get(ref(db, 'status/' + id));
+                    const statusData = statusSnap.val() || { online: false };
 
-            return {
-                id,
-                ...userData,
-                ...chatsData[id],
-                online: statusData.online
-            };
-        }));
+                    resolvedChats.push({
+                        id,
+                        ...userData,
+                        ...chatsData[id],
+                        online: statusData.online
+                    });
+                } catch (err) {
+                    console.warn(`Error loading chat member ${id}:`, err);
+                    resolvedChats.push({
+                        id,
+                        name: 'Unknown User',
+                        ...chatsData[id],
+                        online: false
+                    });
+                }
+            }
 
-        allLoadedChats = resolvedChats.sort((a, b) => (b.time || 0) - (a.time || 0));
-        renderChats(allLoadedChats);
+            allLoadedChats = resolvedChats.sort((a, b) => (b.time || 0) - (a.time || 0));
+            console.log("Rendering", allLoadedChats.length, "chats");
+            renderChats(allLoadedChats);
+        } catch (error) {
+            console.error("Critical error in loadChats processing:", error);
+            chatListContainer.innerHTML = '<div class="p-8 text-center text-red-400">Error processing your chats.</div>';
+        }
+    }, (error) => {
+        clearTimeout(timeoutMsg);
+        console.error("Firebase Database listener failed:", error);
+        let msg = "Connection error.";
+        if (error.code === 'PERMISSION_DENIED') msg = "Access denied (Auth required).";
+        chatListContainer.innerHTML = `<div class="p-8 text-center text-red-500">${msg}</div>`;
     });
 }
 
@@ -143,4 +216,4 @@ window.toggleSearch = () => {
 
 if (searchBtn) searchBtn.onclick = window.toggleSearch;
 
-loadChats();
+// loadChats is called inside onAuthStateChanged

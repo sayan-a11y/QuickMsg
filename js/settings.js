@@ -1,5 +1,6 @@
 
 import { db, ref, onValue } from './firebase-config.js';
+import { User } from './api.js';
 
 const profileName = document.getElementById('profile-name');
 const profileStatus = document.getElementById('profile-status');

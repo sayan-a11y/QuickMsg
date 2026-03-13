@@ -1,12 +1,21 @@
-
-import { db, ref, onValue, get, push, set, remove, serverTimestamp } from './firebase-config.js';
+import { db, ref, onValue, get, push, set, remove, serverTimestamp, auth, onAuthStateChanged } from './firebase-config.js';
+import { User, utils } from './api.js';
 
 const callsList = document.getElementById('calls-list');
 const deleteModal = document.getElementById('delete-modal');
 const confirmDeleteBtn = document.getElementById('confirm-delete-btn');
 
-const currentUser = User.get();
-if (!currentUser) window.location.href = '/index.html';
+let currentUser = User.get();
+
+// Wait for Auth
+onAuthStateChanged(auth, (user) => {
+    if (user) {
+        currentUser = User.get() || { id: user.uid };
+        loadCalls();
+    } else {
+        window.location.href = '/index.html';
+    }
+});
 
 let longPressTimer;
 let currentDeleteId = null;
@@ -83,4 +92,4 @@ confirmDeleteBtn.onclick = async () => {
     deleteModal.classList.add('hidden');
 };
 
-loadCalls();
+// loadCalls is called inside onAuthStateChanged

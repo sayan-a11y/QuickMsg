@@ -1,0 +1,150 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>QuickMsg - Status</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <link rel="stylesheet" href="css/style.css">
+</head>
+
+<body class="bg-gray-50 flex flex-col h-screen max-w-md mx-auto relative shadow-2xl overflow-hidden">
+
+    <!-- Header -->
+    <header
+        class="bg-white p-4 flex items-center justify-between border-b border-gray-100 z-10 sticky top-0 shadow-sm transition-colors">
+        <h1 class="text-xl font-bold text-gray-800">Status</h1>
+        <div class="flex items-center space-x-4 text-gray-500 text-lg">
+            <i class="fas fa-ellipsis-v cursor-pointer hover:text-blue-600 transition-colors"></i>
+        </div>
+    </header>
+
+    <!-- Content -->
+    <main class="flex-1 overflow-y-auto pb-24 bg-white">
+        <!-- My Status -->
+        <div class="p-4 flex items-center space-x-4 hover:bg-gray-50 cursor-pointer border-b border-gray-50"
+            onclick="window.location.href='status-upload.html'">
+            <div class="relative">
+                <div
+                    class="w-14 h-14 bg-gray-100 rounded-full flex items-center justify-center text-gray-400 border-2 border-gray-200 p-1">
+                    <img id="my-avatar" src="" class="w-full h-full rounded-full object-cover hidden">
+                    <div id="my-avatar-placeholder"
+                        class="w-full h-full bg-blue-100 text-blue-600 rounded-full flex items-center justify-center font-bold text-xl uppercase shadow-sm">
+                    </div>
+                    <div
+                        class="absolute bottom-0 right-0 bg-emerald-500 text-white w-5 h-5 rounded-full flex items-center justify-center border-2 border-white text-[10px]">
+                        <i class="fas fa-plus"></i>
+                    </div>
+                </div>
+            </div>
+            <div>
+                <h3 class="font-bold text-gray-800">My Status</h3>
+                <p class="text-sm text-gray-400">Tap to add status update</p>
+            </div>
+        </div>
+
+        <div
+            class="p-3 bg-gray-50 text-[11px] font-bold text-gray-400 uppercase tracking-widest px-4 border-b border-gray-100">
+            Recent updates
+        </div>
+
+        <!-- Status List -->
+        <div id="status-list" class="divide-y divide-gray-50">
+            <div class="p-8 text-center text-gray-400">
+                <i class="fas fa-circle-notch fa-spin text-2xl mb-2"></i>
+                <p>Checking for updates...</p>
+            </div>
+        </div>
+    </main>
+
+    <!-- Bottom Navigation -->
+    <nav id="bottom-nav">
+        <!-- Will be loaded from navbar.html -->
+    </nav>
+
+    <!-- Status Full Viewer (Hidden) -->
+    <div id="status-viewer" class="hidden fixed inset-0 bg-black z-50 flex flex-col animate-slide-up">
+        <div class="absolute top-2 left-2 right-2 flex space-x-1 z-50" id="status-progress-bar">
+            <!-- Progress bars filled by JS -->
+        </div>
+
+        <div class="p-4 pt-6 flex items-center space-x-3 text-white z-50 bg-gradient-to-b from-black/60 to-transparent">
+            <i class="fas fa-arrow-left cursor-pointer p-2" onclick="closeStatus()"></i>
+            <div class="w-10 h-10 bg-white/20 rounded-full flex items-center justify-center font-bold overflow-hidden"
+                id="viewer-avatar-container">
+                <img id="viewer-avatar" src="" class="w-full h-full object-cover hidden">
+                <div id="viewer-avatar-text" class="text-lg"></div>
+            </div>
+            <div>
+                <h3 class="font-bold text-sm" id="viewer-name">User Name</h3>
+                <p class="text-[10px] text-white/80" id="viewer-time">2h ago</p>
+            </div>
+            <div class="flex-1"></div>
+            <div class="relative">
+                <i class="fas fa-ellipsis-v p-2 cursor-pointer" onclick="toggleStatusMenu(event)"></i>
+                <div id="status-menu"
+                    class="hidden absolute right-0 top-10 bg-white text-gray-800 rounded-lg shadow-xl w-32 overflow-hidden z-[60]">
+                    <div id="delete-status-btn"
+                        class="px-4 py-3 hover:bg-red-50 text-red-600 cursor-pointer font-medium text-sm flex items-center hidden"
+                        onclick="deleteCurrentStatus(event)">
+                        <i class="fas fa-trash-alt mr-2"></i> Delete
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="flex-1 flex items-center justify-center relative w-full h-full" id="media-container"
+            onclick="nextStatus()">
+            <img id="viewer-img" src="" class="w-full h-full object-contain hidden" crossorigin="anonymous">
+            <video id="viewer-vid" src="" class="w-full h-full object-contain hidden" playsinline autoplay
+                crossorigin="anonymous"></video>
+        </div>
+
+        <!-- Seen List & Reply -->
+        <div
+            class="p-6 pb-12 flex flex-col items-center space-y-4 absolute bottom-0 w-full bg-gradient-to-t from-black/80 to-transparent z-50">
+            <!-- Caption -->
+            <div id="viewer-caption-container" class="w-full text-center text-white drop-shadow-md hidden mb-2">
+                <p id="viewer-caption-text" class="text-[15px] font-medium"></p>
+            </div>
+
+            <!-- Viewers (Only for my status) -->
+            <div id="viewer-count"
+                class="hidden flex flex-col items-center text-white cursor-pointer hover:text-gray-200 transition-colors"
+                onclick="showViewers()">
+                <i class="fas fa-eye mb-1"></i>
+                <span class="text-[12px] font-bold" id="viewer-count-text">0</span>
+            </div>
+
+            <!-- Reply (For others status) -->
+            <div class="w-full relative group" id="reply-container">
+                <input type="text" id="reply-input" placeholder="Reply..."
+                    class="w-full bg-black/40 px-6 py-3 rounded-full text-white focus:outline-none focus:ring-1 focus:ring-white transition-all font-medium border border-white/20 placeholder-white/60">
+                <i class="fas fa-paper-plane absolute right-4 top-1/2 -transform -translate-y-1/2 text-white/80 cursor-pointer p-2"
+                    onclick="sendReply()"></i>
+            </div>
+        </div>
+
+        <!-- Viewers Bottom Sheet -->
+        <div id="viewers-sheet"
+            class="hidden absolute bottom-0 w-full h-2/3 bg-white rounded-t-3xl z-50 flex flex-col shadow-[0_-10px_40px_rgba(0,0,0,0.2)] transition-transform translate-y-full">
+            <div class="p-4 border-b border-gray-100 flex justify-between items-center">
+                <h3 class="font-bold text-gray-800 text-lg">Viewed by</h3>
+                <i class="fas fa-times text-gray-400 cursor-pointer p-2" onclick="closeViewers()"></i>
+            </div>
+            <div id="viewers-list" class="flex-1 overflow-y-auto divide-y divide-gray-50 bg-white">
+                <!-- Viewer items injected via JS -->
+            </div>
+        </div>
+    </div>
+
+    <script src="/socket.io/socket.io.js"></script>
+    <script src="js/api.js"></script>
+    <script src="js/status.js"></script>
+    <script src="js/nav.js"></script>
+</body>
+
+</html>

@@ -1,0 +1,188 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>QuickMsg - Settings</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <!-- Material Icons -->
+    <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
+    <link rel="stylesheet" href="css/style.css">
+    <style>
+        body {
+            background-color: #ffffff;
+        }
+
+        .row-item {
+            height: 64px;
+            border-bottom: 1px solid #f5f5f5;
+            transition: background 0.2s;
+        }
+
+        .avatar-green {
+            background-color: #128c7e;
+        }
+
+        .icon-gray {
+            color: #8696a0;
+            font-size: 24px;
+            width: 32px;
+            text-align: center;
+        }
+
+        .text-whatsapp-title {
+            color: #111b21;
+            font-size: 16px;
+            font-weight: 500;
+        }
+
+        .text-whatsapp-subtitle {
+            color: #667781;
+            font-size: 13px;
+        }
+
+        .divider {
+            height: 1px;
+            background-color: #eeeeee;
+            width: 100%;
+        }
+
+        .dark-mode .row-item {
+            border-bottom: 1px solid #2a3942;
+        }
+    </style>
+</head>
+
+<body class="flex flex-col h-screen max-w-[500px] mx-auto relative overflow-x-hidden transition-colors">
+
+    <!-- Header -->
+    <header class="bg-white sticky top-0 z-20 flex items-center px-4 justify-between transition-colors shadow-sm"
+        style="height: 56px; border-bottom: 1px solid #eeeeee;">
+        <div class="flex items-center space-x-6">
+            <span class="material-icons text-gray-600 cursor-pointer"
+                onclick="location.href='home.html'">arrow_back</span>
+            <h1 class="text-lg font-bold text-gray-800">Settings</h1>
+        </div>
+        <span class="material-icons text-gray-600 cursor-pointer">search</span>
+    </header>
+
+    <main class="flex-1 overflow-y-auto bg-white">
+        <!-- Profile Section -->
+        <div class="flex items-center p-4 space-x-4 cursor-pointer hover:bg-gray-50 transition-colors"
+            onclick="go('profile.html')">
+            <div class="w-16 h-16 avatar-green rounded-full flex items-center justify-center text-white text-2xl font-bold"
+                id="profile-avatar">
+                ?
+            </div>
+            <div class="flex-1">
+                <h2 class="text-whatsapp-title text-lg" id="profile-name">Loading...</h2>
+                <p class="text-whatsapp-subtitle" id="profile-status">Available</p>
+            </div>
+            <div class="flex items-center space-x-4 text-[#128c7e]">
+                <span class="material-icons">qr_code</span>
+                <span class="material-icons">add_circle_outline</span>
+            </div>
+        </div>
+
+        <div class="divider"></div>
+
+        <!-- Menu List -->
+        <div class="flex flex-col">
+            <!-- Account -->
+            <div class="row-item flex items-center px-6 gap-6 hover:bg-gray-50 cursor-pointer"
+                onclick="go('account.html')">
+                <span class="material-icons icon-gray">key</span>
+                <div class="flex-1 flex flex-col justify-center h-full">
+                    <h3 class="text-whatsapp-title">Account</h3>
+                    <p class="text-whatsapp-subtitle">Security notifications, change number</p>
+                </div>
+            </div>
+
+            <!-- Privacy -->
+            <div class="row-item flex items-center px-6 gap-6 hover:bg-gray-50 cursor-pointer"
+                onclick="go('privacy.html')">
+                <span class="material-icons icon-gray">lock</span>
+                <div class="flex-1 flex flex-col justify-center h-full">
+                    <h3 class="text-whatsapp-title">Privacy</h3>
+                    <p class="text-whatsapp-subtitle">Block contacts, disappearing messages</p>
+                </div>
+            </div>
+
+            <!-- Avatar -->
+            <div class="row-item flex items-center px-6 gap-6 hover:bg-gray-50 cursor-pointer"
+                onclick="go('avatar.html')">
+                <span class="material-icons icon-gray">account_circle</span>
+                <div class="flex-1 flex flex-col justify-center h-full">
+                    <h3 class="text-whatsapp-title">Avatar</h3>
+                    <p class="text-whatsapp-subtitle">Create, edit, profile photo</p>
+                </div>
+            </div>
+
+            <!-- Chats -->
+            <div class="row-item flex items-center px-6 gap-6 hover:bg-gray-50 cursor-pointer"
+                onclick="go('chats.html')">
+                <span class="material-icons icon-gray">chat</span>
+                <div class="flex-1 flex flex-col justify-center h-full">
+                    <h3 class="text-whatsapp-title">Chats</h3>
+                    <p class="text-whatsapp-subtitle">Theme, wallpapers, chat history</p>
+                </div>
+            </div>
+
+            <!-- Notifications -->
+            <div class="row-item flex items-center px-6 gap-6 hover:bg-gray-50 cursor-pointer"
+                onclick="go('notifications.html')">
+                <span class="material-icons icon-gray">notifications</span>
+                <div class="flex-1 flex flex-col justify-center h-full">
+                    <h3 class="text-whatsapp-title">Notifications</h3>
+                    <p class="text-whatsapp-subtitle">Message, group & call tones</p>
+                </div>
+            </div>
+
+            <!-- Storage -->
+            <div class="row-item flex items-center px-6 gap-6 hover:bg-gray-50 cursor-pointer"
+                onclick="go('storage.html')">
+                <span class="material-icons icon-gray">storage</span>
+                <div class="flex-1 flex flex-col justify-center h-full">
+                    <h3 class="text-whatsapp-title">Storage and data</h3>
+                    <p class="text-whatsapp-subtitle">Network usage, auto-download</p>
+                </div>
+            </div>
+
+            <!-- Language -->
+            <div class="row-item flex items-center px-6 gap-6 hover:bg-gray-50 cursor-pointer"
+                onclick="go('language.html')">
+                <span class="material-icons icon-gray">language</span>
+                <div class="flex-1 flex flex-col justify-center h-full">
+                    <h3 class="text-whatsapp-title">App language</h3>
+                    <p class="text-whatsapp-subtitle">English (device's language)</p>
+                </div>
+            </div>
+
+            <!-- Help -->
+            <div class="row-item flex items-center px-6 gap-6 hover:bg-gray-50 cursor-pointer"
+                onclick="go('help.html')">
+                <span class="material-icons icon-gray">help_outline</span>
+                <div class="flex-1 flex flex-col justify-center h-full">
+                    <h3 class="text-whatsapp-title">Help</h3>
+                    <p class="text-whatsapp-subtitle">Help center, contact us, privacy policy</p>
+                </div>
+            </div>
+
+            <!-- Invite -->
+            <div class="row-item flex items-center px-6 gap-6 hover:bg-gray-50 cursor-pointer mb-20"
+                onclick="go('invite.html')">
+                <span class="material-icons icon-gray">group</span>
+                <div class="flex-1 flex flex-col justify-center h-full">
+                    <h3 class="text-whatsapp-title">Invite a friend</h3>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <script src="js/api.js"></script>
+    <script src="js/settings.js"></script>
+</body>
+
+</html>

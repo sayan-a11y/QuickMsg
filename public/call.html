@@ -1,0 +1,71 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>QuickMsg - Video Call</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <link rel="stylesheet" href="css/style.css">
+    <style>
+        body { 
+            height: 100vh; 
+            margin: 0; 
+            overflow: hidden; 
+            background: #000;
+        }
+        video {
+            pointer-events: none;
+        }
+        .ui-element {
+            z-index: 10;
+        }
+    </style>
+</head>
+<body class="flex flex-col h-screen max-w-md mx-auto relative shadow-2xl overflow-hidden text-white">
+
+    <!-- Remote Video Full Screen -->
+    <video id="remoteVideo"
+        class="fixed inset-0 w-full h-full object-cover"
+        autoplay
+        playsinline>
+    </video>
+
+    <!-- Local Video Small -->
+    <video id="localVideo"
+        class="absolute top-4 right-4 w-28 h-36 rounded-xl object-cover border border-white/30 shadow-2xl z-20"
+        autoplay
+        muted
+        playsinline>
+    </video>
+
+    <!-- Top Info Section -->
+    <div class="absolute top-8 w-full text-center ui-element">
+        <h2 id="callName" class="text-xl font-bold drop-shadow-lg">Loading...</h2>
+        <p id="callStatus" class="text-sm text-white/80 drop-shadow-md">Connecting…</p>
+        <p id="callTimer" class="text-xs mt-1 font-mono tracking-wider tabular-nums">00:00</p>
+    </div>
+
+    <!-- Bottom Control Bar -->
+    <div class="absolute bottom-10 left-1/2 -translate-x-1/2 bg-black/70 backdrop-blur-xl px-6 py-4 rounded-full flex gap-5 items-center ui-element border border-white/10 shadow-2xl">
+        <button id="muteBtn" onclick="toggleMute()" class="control-btn" title="Mute">
+            <i class="fas fa-microphone"></i>
+        </button>
+        <button id="videoBtn" onclick="toggleVideo()" class="control-btn" title="Video">
+            <i class="fas fa-video"></i>
+        </button>
+        <button id="speakerBtn" onclick="toggleSpeaker()" class="control-btn" title="Speaker">
+            <i class="fas fa-volume-up"></i>
+        </button>
+        <button onclick="endCall()" class="end-call-btn pulse-red" title="End Call">
+            <i class="fas fa-phone-slash"></i>
+        </button>
+    </div>
+
+    <script src="/socket.io/socket.io.js"></script>
+    <script src="js/api.js"></script>
+    <script src="js/webrtc.js"></script>
+    <script src="js/call.js"></script>
+</body>
+</html>

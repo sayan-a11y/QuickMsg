@@ -1,0 +1,75 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>QuickMsg - Upload Status</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <link rel="stylesheet" href="css/style.css">
+</head>
+
+<body class="bg-black flex flex-col h-screen max-w-md mx-auto relative overflow-hidden">
+
+    <!-- File Picker Overlay -->
+    <div id="file-picker-container"
+        class="absolute inset-0 flex flex-col items-center justify-center text-white z-50 bg-black">
+        <i class="fas fa-image text-4xl mb-4"></i>
+        <h2 class="text-xl mb-6 font-medium">Select a photo or video</h2>
+        <input type="file" id="file-input" accept="image/*,video/*" class="hidden">
+        <button onclick="document.getElementById('file-input').click()"
+            class="bg-emerald-500 text-black px-6 py-2 rounded-full font-bold shadow-lg">Browse Files</button>
+        <button onclick="window.location.href='status.html'"
+            class="mt-6 text-white/70 hover:text-white transition-colors">Cancel</button>
+    </div>
+
+    <!-- Preview UI (Hidden initially) -->
+    <div id="preview-ui" class="hidden absolute inset-0 flex flex-col z-40 bg-black">
+        <!-- Media Background -->
+        <img id="preview-img" class="absolute inset-0 w-full h-full object-cover hidden">
+        <video id="preview-vid" class="absolute inset-0 w-full h-full object-cover hidden" autoplay loop playsinline
+            muted></video>
+
+        <!-- Dark Gradient Overlays -->
+        <div class="absolute inset-0 flex flex-col justify-between pointer-events-none">
+
+            <!-- Top Bar -->
+            <div
+                class="p-4 flex items-center justify-between text-white pointer-events-auto bg-gradient-to-b from-black/60 to-transparent pt-6">
+                <i class="fas fa-times cursor-pointer text-2xl drop-shadow-md p-2"
+                    onclick="window.location.href='status.html'"></i>
+                <div class="flex space-x-6 text-2xl drop-shadow-md pr-2">
+                    <i class="fas fa-crop-alt cursor-pointer"></i>
+                    <i class="fas fa-font cursor-pointer"></i>
+                    <i class="fas fa-pen cursor-pointer"></i>
+                </div>
+            </div>
+
+            <!-- Bottom Bar -->
+            <div
+                class="p-4 pb-6 flex flex-col pointer-events-auto bg-gradient-to-t from-black/60 to-transparent w-full space-y-4">
+                <div class="flex items-center space-x-3 w-full">
+                    <div
+                        class="flex-1 bg-black/40 rounded-full flex items-center px-4 py-3 backdrop-blur-sm border border-white/20">
+                        <input type="text" id="caption-input" placeholder="Add a caption..."
+                            class="bg-transparent w-full text-white placeholder-white/80 focus:outline-none font-medium">
+                    </div>
+                    <button id="send-btn"
+                        class="w-12 h-12 rounded-full bg-emerald-500 text-white flex items-center justify-center cursor-pointer shadow-lg hover:scale-105 transition-transform flex-shrink-0"
+                        onclick="uploadStatus()">
+                        <i class="fas fa-paper-plane text-xl translate-x-[-1px] translate-y-[1px]"></i>
+                    </button>
+                </div>
+            </div>
+
+        </div>
+    </div>
+
+    <script src="/socket.io/socket.io.js"></script>
+    <script src="js/api.js"></script>
+    <script src="js/status-upload.js"></script>
+</body>
+
+</html>

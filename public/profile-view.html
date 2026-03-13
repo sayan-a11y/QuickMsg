@@ -1,0 +1,130 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>User Profile - QuickMsg</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <style>
+        body { font-family: 'Inter', sans-serif; }
+        .wa-bg-green { background-color: #008069; }
+        .wa-green { color: #008069; }
+        .profile-img-container {
+            width: 180px;
+            height: 180px;
+            margin: 0 auto;
+        }
+        .animate-fade-in {
+            animation: fadeIn 0.3s ease-in-out;
+        }
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+    </style>
+</head>
+<body class="bg-gray-100 flex flex-col h-screen max-w-md mx-auto shadow-2xl overflow-hidden relative">
+    <!-- Header -->
+    <header class="bg-[#008069] p-4 flex items-center shadow-md z-20 space-x-4">
+        <i class="fas fa-arrow-left text-white cursor-pointer p-2 hover:bg-white/10 rounded-full transition-colors"
+            onclick="history.back()"></i>
+        <h1 class="text-xl font-semibold text-white">Profile</h1>
+    </header>
+
+    <main class="flex-1 overflow-y-auto pb-10 bg-[#f0f2f5]">
+        <!-- Hero Section -->
+        <div class="bg-white pb-6 pt-10 shadow-sm">
+            <div class="profile-img-container relative mb-4">
+                <img id="profile-avatar" src="https://ui-avatars.com/api/?name=User&background=random" 
+                    class="w-full h-full rounded-full object-cover border-4 border-white shadow-xl">
+                <button id="edit-avatar-btn" class="absolute bottom-2 right-2 w-10 h-10 wa-bg-green text-white rounded-full flex items-center justify-center shadow-lg hover:scale-105 transition-transform hidden">
+                    <i class="fas fa-camera"></i>
+                </button>
+                <input type="file" id="avatar-input" class="hidden" accept="image/*">
+            </div>
+            <div class="text-center px-4">
+                <h2 id="profile-name" class="text-2xl font-bold text-gray-800">Loading...</h2>
+                <p id="profile-username" class="text-gray-500 font-medium">@username</p>
+            </div>
+        </div>
+
+        <!-- Info Sections -->
+        <div class="mt-3 space-y-3">
+            <!-- About Section -->
+            <div class="bg-white p-4 shadow-sm relative group">
+                <div class="flex items-center space-x-4 mb-1">
+                    <i class="fas fa-info-circle text-[#008069] w-5"></i>
+                    <p class="text-[13px] font-medium text-[#008069]">About</p>
+                </div>
+                <div class="ml-9 flex justify-between items-center group">
+                    <p id="profile-about" class="text-gray-800 whitespace-pre-wrap leading-relaxed">Hey there! I am using QuickMsg.</p>
+                    <button id="edit-about-btn" class="text-[#008069] p-2 rounded-full hover:bg-gray-100 hidden">
+                        <i class="fas fa-pen text-sm"></i>
+                    </button>
+                </div>
+            </div>
+
+            <!-- Contact Info -->
+            <div class="bg-white p-4 shadow-sm">
+                <div class="flex items-center space-x-4 mb-4">
+                    <i class="fas fa-phone text-[#008069] w-5"></i>
+                    <div class="flex-1">
+                        <p class="text-[13px] font-medium text-[#008069]">Phone</p>
+                        <div class="flex justify-between items-center">
+                            <p id="profile-phone" class="text-gray-800">No phone added</p>
+                            <button id="edit-phone-btn" class="text-[#008069] p-2 rounded-full hover:bg-gray-100 hidden">
+                                <i class="fas fa-pen text-sm"></i>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="flex items-center space-x-4">
+                    <i class="fas fa-link text-[#008069] w-5"></i>
+                    <div class="flex-1">
+                        <p class="text-[13px] font-medium text-[#008069]">Social Links</p>
+                        <div class="flex justify-between items-center">
+                            <p id="profile-links" class="text-gray-800">No links added</p>
+                            <button id="edit-links-btn" class="text-[#008069] p-2 rounded-full hover:bg-gray-100 hidden">
+                                <i class="fas fa-pen text-sm"></i>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Actions (Conditional) -->
+            <div id="extra-actions" class="bg-white p-4 shadow-sm hidden">
+                <button onclick="logout()" class="w-full flex items-center space-x-4 text-red-500 py-2">
+                    <i class="fas fa-sign-out-alt w-5"></i>
+                    <span class="font-medium">Logout</span>
+                </button>
+            </div>
+        </div>
+    </main>
+
+    <!-- Simple Edit Modal -->
+    <div id="editModal" class="fixed inset-0 bg-black/60 z-[100] hidden flex items-center justify-center p-6 backdrop-blur-[2px]">
+        <div class="bg-white rounded-2xl w-full max-w-sm shadow-2xl overflow-hidden animate-fade-in">
+            <div class="p-6">
+                <h3 id="modalTitle" class="text-lg font-bold text-gray-800 mb-4">Edit field</h3>
+                <textarea id="modalInput" class="w-full px-4 py-3 bg-gray-50 border-2 border-gray-100 rounded-xl focus:border-[#008069] outline-none transition-all font-medium min-h-[100px] resize-none"></textarea>
+            </div>
+            <div class="flex border-t border-gray-100">
+                <button onclick="closeModal()" class="flex-1 px-6 py-4 text-gray-400 font-bold hover:bg-gray-50 transition-colors">Cancel</button>
+                <button id="saveBtn" class="flex-1 px-6 py-4 wa-green font-bold hover:bg-gray-50 transition-colors border-l border-gray-100">Save</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Toast Notification -->
+    <div id="toast" class="fixed bottom-10 left-1/2 -translate-x-1/2 bg-gray-800/90 text-white px-6 py-3 rounded-full text-sm font-medium shadow-2xl opacity-0 transition-all pointer-events-none z-[200] backdrop-blur-md">
+        Success
+    </div>
+
+    <script src="js/api.js"></script>
+    <script src="js/profile-view.js"></script>
+</body>
+</html>

@@ -1,0 +1,124 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>QuickMsg - Privacy Settings</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
+    <link rel="stylesheet" href="css/style.css">
+    <style>
+        body {
+            background-color: #ffffff;
+        }
+
+        .row-item {
+            height: 64px;
+            border-bottom: 1px solid #f5f5f5;
+            transition: background 0.2s;
+        }
+
+        .icon-gray {
+            color: #8696a0;
+            font-size: 24px;
+            width: 32px;
+            text-align: center;
+        }
+
+        .text-whatsapp-title {
+            color: #111b21;
+            font-size: 16px;
+            font-weight: 500;
+        }
+
+        .text-whatsapp-subtitle {
+            color: #667781;
+            font-size: 13px;
+        }
+
+        .section-title {
+            color: #667781;
+            font-size: 14px;
+            font-weight: 600;
+            padding: 16px 24px 8px;
+        }
+    </style>
+</head>
+
+<body class="flex flex-col h-screen max-w-[500px] mx-auto relative overflow-x-hidden transition-colors">
+
+    <header class="bg-white sticky top-0 z-20 flex items-center px-4 justify-between transition-colors shadow-sm"
+        style="height: 56px; border-bottom: 1px solid #eeeeee;">
+        <div class="flex items-center space-x-6">
+            <span class="material-icons text-gray-600 cursor-pointer"
+                onclick="location.href='settings.html'">arrow_back</span>
+            <h1 class="text-lg font-bold text-gray-800">Privacy</h1>
+        </div>
+    </header>
+
+    <main class="flex-1 overflow-y-auto bg-white">
+        <h2 class="section-title">Who can see my personal info</h2>
+
+        <div class="row-item flex items-center px-6 gap-6 hover:bg-gray-50 cursor-pointer">
+            <div class="flex-1 flex flex-col justify-center h-full">
+                <h3 class="text-whatsapp-title">Last seen and online</h3>
+                <p class="text-whatsapp-subtitle">Everyone</p>
+            </div>
+        </div>
+
+        <div class="row-item flex items-center px-6 gap-6 hover:bg-gray-50 cursor-pointer">
+            <div class="flex-1 flex flex-col justify-center h-full">
+                <h3 class="text-whatsapp-title">Profile photo</h3>
+                <p class="text-whatsapp-subtitle">My contacts</p>
+            </div>
+        </div>
+
+        <div class="row-item flex items-center px-6 gap-6 hover:bg-gray-50 cursor-pointer">
+            <div class="flex-1 flex flex-col justify-center h-full">
+                <h3 class="text-whatsapp-title">About</h3>
+                <p class="text-whatsapp-subtitle">Everyone</p>
+            </div>
+        </div>
+
+        <div class="row-item flex items-center px-6 gap-6 hover:bg-gray-50 cursor-pointer">
+            <div class="flex-1 flex flex-col justify-center h-full">
+                <h3 class="text-whatsapp-title">Status</h3>
+                <p class="text-whatsapp-subtitle">My contacts</p>
+            </div>
+        </div>
+
+        <div class="row-item flex items-center px-6 gap-6 hover:bg-gray-50 cursor-pointer">
+            <div class="flex-1 flex flex-col justify-center h-full">
+                <h3 class="text-whatsapp-title">Read receipts</h3>
+                <p class="text-whatsapp-subtitle">If turned off, you won't send or receive read receipts</p>
+            </div>
+            <label class="relative inline-flex items-center cursor-pointer pointer-events-none">
+                <input type="checkbox" checked class="sr-only peer">
+                <div class="w-11 h-6 bg-gray-200 rounded-full peer peer-checked:bg-[#00a884]"></div>
+            </label>
+        </div>
+
+        <h2 class="section-title">Disappearing messages</h2>
+
+        <div class="row-item flex items-center px-6 gap-6 hover:bg-gray-50 cursor-pointer">
+            <div class="flex-1 flex flex-col justify-center h-full">
+                <h3 class="text-whatsapp-title">Default message timer</h3>
+                <p class="text-whatsapp-subtitle">Start new chats with disappearing messages set to your timer</p>
+            </div>
+            <p class="text-whatsapp-subtitle">Off</p>
+        </div>
+    </main>
+
+    <script>
+        function applyTheme() {
+            const isDark = localStorage.getItem('dark-mode') === 'true';
+            if (isDark) document.body.classList.add('dark-mode');
+            else document.body.classList.remove('dark-mode');
+        }
+        applyTheme();
+    </script>
+</body>
+
+</html>

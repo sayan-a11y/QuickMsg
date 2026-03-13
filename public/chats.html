@@ -1,0 +1,161 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>QuickMsg - Chats Settings</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
+    <link rel="stylesheet" href="css/style.css">
+    <style>
+        body {
+            background-color: #ffffff;
+        }
+
+        .row-item {
+            height: 64px;
+            border-bottom: 1px solid #f5f5f5;
+            transition: background 0.2s;
+        }
+
+        .icon-gray {
+            color: #8696a0;
+            font-size: 24px;
+            width: 32px;
+            text-align: center;
+        }
+
+        .text-whatsapp-title {
+            color: #111b21;
+            font-size: 16px;
+            font-weight: 500;
+        }
+
+        .text-whatsapp-subtitle {
+            color: #667781;
+            font-size: 13px;
+        }
+
+        .divider {
+            height: 1px;
+            background-color: #eeeeee;
+            width: 100%;
+        }
+
+        .section-title {
+            color: #667781;
+            font-size: 14px;
+            font-weight: 600;
+            padding: 16px 24px 8px;
+        }
+    </style>
+</head>
+
+<body class="flex flex-col h-screen max-w-[500px] mx-auto relative overflow-x-hidden transition-colors">
+
+    <!-- Header -->
+    <header class="bg-white sticky top-0 z-20 flex items-center px-4 justify-between transition-colors shadow-sm"
+        style="height: 56px; border-bottom: 1px solid #eeeeee;">
+        <div class="flex items-center space-x-6">
+            <span class="material-icons text-gray-600 cursor-pointer"
+                onclick="location.href='settings.html'">arrow_back</span>
+            <h1 class="text-lg font-bold text-gray-800">Chats</h1>
+        </div>
+    </header>
+
+    <main class="flex-1 overflow-y-auto bg-white">
+        <h2 class="section-title">Display</h2>
+
+        <!-- Dark Mode Toggle Row -->
+        <div class="row-item flex items-center px-6 gap-6 hover:bg-gray-50 cursor-pointer" onclick="toggleDarkMode()">
+            <span class="material-icons icon-gray">brightness_4</span>
+            <div class="flex-1 flex flex-col justify-center h-full">
+                <h3 class="text-whatsapp-title">Dark Mode</h3>
+                <p class="text-whatsapp-subtitle" id="dark-mode-status">Off</p>
+            </div>
+            <label class="relative inline-flex items-center cursor-pointer pointer-events-none">
+                <input type="checkbox" id="dark-mode-input" class="sr-only peer">
+                <div
+                    class="w-11 h-6 bg-gray-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-[#00a884]">
+                </div>
+            </label>
+        </div>
+
+        <div class="row-item flex items-center px-6 gap-6 hover:bg-gray-50 cursor-pointer">
+            <span class="material-icons icon-gray">wallpaper</span>
+            <div class="flex-1 flex flex-col justify-center h-full">
+                <h3 class="text-whatsapp-title">Wallpaper</h3>
+            </div>
+        </div>
+
+        <h2 class="section-title">Chat settings</h2>
+
+        <div class="row-item flex items-center px-6 gap-6 hover:bg-gray-50 cursor-pointer">
+            <span class="material-icons icon-gray">keyboard_return</span>
+            <div class="flex-1 flex flex-col justify-center h-full">
+                <h3 class="text-whatsapp-title">Enter is send</h3>
+                <p class="text-whatsapp-subtitle">Enter key will send your message</p>
+            </div>
+        </div>
+
+        <div class="row-item flex items-center px-6 gap-6 hover:bg-gray-50 cursor-pointer">
+            <span class="material-icons icon-gray">visibility</span>
+            <div class="flex-1 flex flex-col justify-center h-full">
+                <h3 class="text-whatsapp-title">Media visibility</h3>
+                <p class="text-whatsapp-subtitle">Show newly downloaded media in your gallery</p>
+            </div>
+        </div>
+
+        <div class="row-item flex items-center px-6 gap-6 hover:bg-gray-50 cursor-pointer">
+            <span class="material-icons icon-gray">format_size</span>
+            <div class="flex-1 flex flex-col justify-center h-full">
+                <h3 class="text-whatsapp-title">Font size</h3>
+                <p class="text-whatsapp-subtitle">Medium</p>
+            </div>
+        </div>
+
+        <h2 class="section-title">Archived chats</h2>
+
+        <div class="row-item flex items-center px-6 gap-6 hover:bg-gray-50 cursor-pointer">
+            <span class="material-icons icon-gray">archive</span>
+            <div class="flex-1 flex flex-col justify-center h-full">
+                <h3 class="text-whatsapp-title">Keep chats archived</h3>
+                <p class="text-whatsapp-subtitle">Archived chats will remain archived when you receive a new message</p>
+            </div>
+        </div>
+
+    </main>
+
+    <script src="js/api.js"></script>
+    <script>
+        const body = document.body;
+        const darkModeInput = document.getElementById('dark-mode-input');
+        const darkModeStatus = document.getElementById('dark-mode-status');
+
+        function applyTheme() {
+            const isDark = localStorage.getItem('dark-mode') === 'true';
+            if (isDark) {
+                body.classList.add('dark-mode');
+                darkModeInput.checked = true;
+                darkModeStatus.innerText = 'On';
+            } else {
+                body.classList.remove('dark-mode');
+                darkModeInput.checked = false;
+                darkModeStatus.innerText = 'Off';
+            }
+        }
+
+        function toggleDarkMode() {
+            const current = localStorage.getItem('dark-mode') === 'true';
+            localStorage.setItem('dark-mode', !current);
+            applyTheme();
+            // Trigger theme update on parent if needed, though they reload on enter
+        }
+
+        applyTheme();
+    </script>
+</body>
+
+</html>

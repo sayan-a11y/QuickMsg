@@ -1,0 +1,35 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <title>Delete Popup Template</title>
+</head>
+
+<body class="bg-gray-100 flex items-center justify-center h-screen">
+
+    <!-- WhatsApp Style Delete Popup -->
+    <div id="confirm-delete-modal" class="fixed inset-0 bg-black/40 flex items-center justify-center p-6">
+        <div class="bg-white w-full max-w-[320px] rounded-[28px] p-6 shadow-2xl">
+            <h3 class="text-[17px] text-gray-600 mb-8 px-1">Delete message?</h3>
+            <div class="flex flex-col items-end space-y-6">
+                <!-- Only visible to sender -->
+                <button class="text-[#008069] font-bold text-[15px] hover:opacity-70 transition-opacity">
+                    Delete for everyone
+                </button>
+                <button class="text-[#008069] font-bold text-[15px] hover:opacity-70 transition-opacity">
+                    Delete for me
+                </button>
+                <button class="text-[#008069] font-bold text-[15px] hover:opacity-70 transition-opacity">
+                    Cancel
+                </button>
+            </div>
+        </div>
+    </div>
+
+</body>
+
+</html>

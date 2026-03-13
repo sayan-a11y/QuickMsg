@@ -23,7 +23,7 @@ export const User = {
     clear() {
         localStorage.removeItem('user');
         auth.signOut();
-        window.location.href = APP_URL + '/index.html';
+        window.location.href = window.location.origin;
     }
 };
 
@@ -59,9 +59,10 @@ onAuthStateChanged(auth, async (user) => {
 
     } else {
         const path = window.location.pathname;
-        // Protect all pages except index.html and root
-        if (path !== '/' && !path.includes('index.html')) {
-            window.location.href = APP_URL + '/index.html';
+        // Protect all pages except root, /index, and login page variants
+        const isLoginPage = path === '/' || path === '' || path.includes('index.html');
+        if (!isLoginPage) {
+            window.location.href = window.location.origin;
         }
     }
 });

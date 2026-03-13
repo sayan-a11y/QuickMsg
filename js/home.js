@@ -20,7 +20,7 @@ onAuthStateChanged(auth, (user) => {
         loadChats();
     } else {
         console.log("Auth resolved: No user found, redirecting to login");
-        window.location.href = './index.html';
+        window.location.href = './';
     }
 });
 

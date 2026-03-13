@@ -15,10 +15,11 @@ const previewTitle = document.getElementById('preview-title');
 const previewText = document.getElementById('preview-text');
 
 // Performance settings
-const MESSAGE_LIMIT = 30; // Load only last 30 messages initially
+const MESSAGE_LIMIT = 40; 
 let lastMessageTimestamp = 0;
-
 let currentUser = User.get();
+let currentChatId = null;
+
 const urlParams = new URLSearchParams(window.location.search);
 const contactId = urlParams.get('id');
 const contactName = urlParams.get('name');
@@ -26,17 +27,16 @@ const contactName = urlParams.get('name');
 let isEditing = false;
 let editingMsgId = null;
 let replyToId = null;
-let currentChatId = null;
 
 // Wait for Auth
 onAuthStateChanged(auth, (user) => {
     if (user) {
-        const localUser = User.get() || {};
-        currentUser = { ...localUser, id: user.uid };
+        currentUser = { ...(User.get() || {}), id: user.uid };
         if (!contactId) {
             window.location.href = './home.html';
             return;
         }
+        // Unique Chat ID for 1-to-1 chats
         currentChatId = currentUser.id < contactId ? `${currentUser.id}_${contactId}` : `${contactId}_${currentUser.id}`;
         headerName.innerText = contactName || 'User';
         initChat();
@@ -48,25 +48,28 @@ onAuthStateChanged(auth, (user) => {
 function initChat() {
     if (!currentChatId) return;
 
-    // Load message history with limit
+    // Load Message history (Realtime listener)
     const dbQuery = query(ref(db, `messages/${currentChatId}`), limitToLast(MESSAGE_LIMIT));
     onValue(dbQuery, (snapshot) => {
         const data = snapshot.val();
         if (data) {
             const messages = Object.values(data).sort((a, b) => {
-                const timeDiff = (a.time || 0) - (b.time || 0);
-                if (timeDiff !== 0) return timeDiff;
+                const diff = (a.time || 0) - (b.time || 0);
+                if (diff !== 0) return diff;
                 return (a.id || "").localeCompare(b.id || "");
             });
             
             const latestTs = messages[messages.length - 1]?.time || 0;
-            if (latestTs === lastMessageTimestamp && messages.length === messagesContainer.children.length) return;
+            const currentCount = messagesContainer.querySelectorAll('.animate-fade-in').length;
+            
+            // Skip re-render if nothing new
+            if (latestTs === lastMessageTimestamp && messages.length === currentCount) return;
             lastMessageTimestamp = latestTs;
 
             renderMessages(messages);
             scrollToBottom();
             
-            // Mark as seen
+            // Unread messages logic
             messages.forEach(msg => {
                 if (msg.receiverId === currentUser.id && !msg.seen) {
                     update(ref(db, `messages/${currentChatId}/${msg.id}`), { seen: true });
@@ -75,21 +78,12 @@ function initChat() {
         } else {
             messagesContainer.innerHTML = '<div class="p-8 text-center text-gray-400">No messages yet.</div>';
         }
+    }, (err) => {
+        console.error("Firebase Read Error:", err);
+        messagesContainer.innerHTML = '<div class="p-8 text-center text-red-500">Error loading messages.</div>';
     });
 
-    // Presence & Status
-    onValue(ref(db, `typing/${currentUser.id}/${contactId}`), (snap) => {
-        const isTyping = snap.val();
-        typingIndicator.classList.toggle('hidden', !isTyping);
-        headerStatus.classList.toggle('hidden', !!isTyping);
-    });
-
-    onValue(ref(db, `status/${contactId}`), (snap) => {
-        const stat = snap.val() || { online: false };
-        updateHeaderStatus(stat.online, stat.lastSeen);
-    });
-
-    // Profile Info
+    // Profile & Presence
     get(ref(db, `users/${contactId}`)).then((snap) => {
         const user = snap.val();
         if (user) {
@@ -100,50 +94,56 @@ function initChat() {
             }
         }
     });
+
+    onValue(ref(db, `typing/${currentUser.id}/${contactId}`), (snap) => {
+        const isTyping = snap.val();
+        typingIndicator.classList.toggle('hidden', !isTyping);
+        headerStatus.classList.toggle('hidden', !!isTyping);
+    });
+
+    onValue(ref(db, `status/${contactId}`), (snap) => {
+        const stat = snap.val() || { online: false };
+        updateHeaderStatus(stat.online, stat.lastSeen);
+    });
 }
 
 function renderMessages(messages) {
+    if (!messages.length) return;
+    
     messagesContainer.innerHTML = messages.map(msg => {
         const isSent = msg.senderId === currentUser.id;
+        
         if (msg.deleted) {
             return `
                 <div class="flex ${isSent ? 'justify-end' : 'justify-start'} mb-2">
                     <div class="max-w-[80%] rounded-2xl px-4 py-2 bg-gray-100 text-gray-400 italic text-xs">
-                        <i class="fas fa-ban mr-1"></i> ${isSent ? 'You deleted this message' : 'This message was deleted'}
+                        <i class="fas fa-ban mr-1"></i> Deleted
                     </div>
-                </div>
-            `;
+                </div>`;
         }
 
-        let ticks = isSent ? (msg.seen ? '<i class="fas fa-check-double text-blue-400 ml-1"></i>' : '<i class="fas fa-check text-gray-400 ml-1"></i>') : '';
-        let replyHtml = msg.replyTo ? `
+        const ticks = isSent ? (msg.seen ? '<i class="fas fa-check-double text-blue-400 ml-1"></i>' : '<i class="fas fa-check text-gray-400 ml-1"></i>') : '';
+        const replyHtml = msg.replyTo ? `
             <div class="bg-black/5 rounded-lg p-2 mb-1 text-xs border-l-4 border-blue-500">
                 <p class="opacity-60 truncate">${msg.replyTo.text}</p>
-            </div>
-        ` : '';
+            </div>` : '';
+
+        const mediaHtml = msg.fileUrl ? (msg.fileType?.includes('image') 
+            ? `<img src="${msg.fileUrl}" class="rounded-lg mb-1 max-h-60 w-full object-cover cursor-pointer" onclick="window.open('${msg.fileUrl}')">` 
+            : `<a href="${msg.fileUrl}" target="_blank" class="flex items-center p-2 bg-black/10 rounded mb-1 text-xs"><i class="fas fa-file mr-2 text-lg"></i> Attachment</a>`) : '';
 
         return `
-            <div class="flex ${isSent ? 'justify-end' : 'justify-start'} animate-fade-in group" id="msg-${msg.id}">
+            <div class="flex ${isSent ? 'justify-end' : 'justify-start'} animate-fade-in group mb-2" id="msg-${msg.id}">
                 <div class="max-w-[85%] rounded-2xl px-3.5 py-2 shadow-sm relative ${isSent ? 'bg-blue-600 text-white rounded-tr-none' : 'bg-white text-gray-800 rounded-tl-none'}">
                     ${replyHtml}
-                    ${msg.fileUrl ? (msg.fileType?.includes('image') ? `<img src="${msg.fileUrl}" class="rounded-lg mb-1 max-h-60 w-full object-cover">` : `<a href="${msg.fileUrl}" target="_blank" class="flex items-center p-2 bg-black/10 rounded mb-1"><i class="fas fa-file mr-2"></i> File</a>`) : ''}
-                    <p class="text-[15px] leading-tight">${msg.text || ''}</p>
+                    ${mediaHtml}
+                    <p class="text-[15px] leading-tight break-words">${msg.text || ''}</p>
                     <div class="flex items-center justify-end space-x-1 mt-1 opacity-70 text-[10px]">
                         <span>${utils.formatTime(msg.time)}</span>
                         ${ticks}
                     </div>
-                    
-                    <button onclick="window.showMsgMenu('${msg.id}', '${(msg.text || '').replace(/'/g, "\\'")}', ${isSent})" class="absolute top-0 ${isSent ? '-left-8' : '-right-8'} p-2 opacity-0 group-hover:opacity-100 transition-opacity text-gray-400">
-                        <i class="fas fa-ellipsis-v"></i>
-                    </button>
-                    ${!isSent ? `
-                       <button onclick="window.setReply('${msg.id}', '${(msg.text || '').replace(/'/g, "\\'")}')" class="absolute top-8 ${isSent ? '-left-8' : '-right-8'} p-2 opacity-0 group-hover:opacity-100 transition-opacity text-gray-400">
-                        <i class="fas fa-reply"></i>
-                       </button>
-                    ` : ''}
                 </div>
-            </div>
-        `;
+            </div>`;
     }).join('') + '<div class="h-4"></div>';
 }
 
@@ -152,11 +152,7 @@ async function sendMessage() {
     if (!text && !fileInput.files[0]) return;
 
     if (isEditing) {
-        await update(ref(db, `messages/${currentChatId}/${editingMsgId}`), { 
-            text, 
-            edited: true,
-            time: serverTimestamp() 
-        });
+        await update(ref(db, `messages/${currentChatId}/${editingMsgId}`), { text, edited: true });
         cancelAction();
         messageInput.value = '';
         return;
@@ -164,7 +160,6 @@ async function sendMessage() {
 
     let fileUrl = null;
     let fileType = null;
-
     if (fileInput.files[0]) {
         const file = fileInput.files[0];
         const res = await API.uploadFile(file);
@@ -173,9 +168,9 @@ async function sendMessage() {
         fileInput.value = '';
     }
 
-    const msgId = push(ref(db, `messages/${currentChatId}`)).key;
+    const msgRef = push(ref(db, `messages/${currentChatId}`));
     const msgData = {
-        id: msgId,
+        id: msgRef.key,
         senderId: currentUser.id,
         receiverId: contactId,
         text,
@@ -185,78 +180,24 @@ async function sendMessage() {
         seen: false
     };
 
-    if (replyToId) {
-        msgData.replyTo = { id: replyToId, text: previewText.innerText };
-    }
+    if (replyToId) msgData.replyTo = { id: replyToId, text: previewText.innerText };
 
-    await set(ref(db, `messages/${currentChatId}/${msgId}`), msgData);
+    await set(msgRef, msgData);
     messageInput.value = '';
     cancelAction();
 
-    const commonUpdate = { lastMessage: text || (fileUrl ? 'Media' : ''), time: serverTimestamp() };
-    update(ref(db, `chats/${currentUser.id}/${contactId}`), { ...commonUpdate, unread: 0 });
-    update(ref(db, `chats/${contactId}/${currentUser.id}`), { ...commonUpdate, unread: increment(1) });
+    // Summary Update
+    const summary = { lastMessage: text || (fileUrl ? 'Media' : ''), time: serverTimestamp() };
+    update(ref(db, `chats/${currentUser.id}/${contactId}`), { ...summary, unread: 0 });
+    update(ref(db, `chats/${contactId}/${currentUser.id}`), { ...summary, unread: increment(1) });
 }
-
-window.showMsgMenu = (id, text, isSent) => {
-    const actions = [];
-    if (isSent) {
-        actions.push({ name: 'Edit', icon: 'fa-edit', action: () => setEdit(id, text) });
-        actions.push({ name: 'Delete', icon: 'fa-trash', action: () => deleteMsg(id) });
-    }
-    actions.push({ name: 'Copy', icon: 'fa-copy', action: () => { navigator.clipboard.writeText(text); alert('Copied!'); } });
-    
-    // Simple custom menu or use a library. For now, let's keep it minimal for performance.
-    const choice = prompt('Choose action: ' + actions.map(a => a.name).join(', '));
-    const selected = actions.find(a => a.name.toLowerCase() === (choice || '').toLowerCase());
-    if (selected) selected.action();
-};
-
-window.setReply = (id, text) => {
-    replyToId = id;
-    previewTitle.innerText = "Replying to";
-    previewText.innerText = text;
-    actionPreview.classList.remove('hidden');
-    messageInput.focus();
-};
-
-function setEdit(id, text) {
-    isEditing = true;
-    editingMsgId = id;
-    messageInput.value = text;
-    previewTitle.innerText = "Editing message";
-    previewText.innerText = text;
-    actionPreview.classList.remove('hidden');
-    messageInput.focus();
-}
-
-async function deleteMsg(id) {
-    if (confirm('Delete message?')) {
-        await update(ref(db, `messages/${currentChatId}/${id}`), { deleted: true });
-    }
-}
-
-function cancelAction() {
-    isEditing = false;
-    editingMsgId = null;
-    replyToId = null;
-    actionPreview.classList.add('hidden');
-}
-
-window.cancelAction = cancelAction;
-
-sendBtn.onclick = sendMessage;
-messageInput.onkeypress = (e) => e.key === 'Enter' && sendMessage();
 
 function updateHeaderStatus(online, lastSeen) {
     if (online) {
-        headerStatus.innerHTML = '<span class="flex items-center"><span class="w-2 h-2 bg-green-500 rounded-full mr-1.5 animate-pulse"></span> Online</span>';
-        headerStatus.classList.remove('text-gray-400');
-        headerStatus.classList.add('text-green-500', 'font-medium');
+        headerStatus.innerHTML = '<span class="flex items-center text-green-500 font-medium"><span class="w-2 h-2 bg-green-500 rounded-full mr-1.5 animate-pulse"></span> Online</span>';
     } else {
         headerStatus.innerText = lastSeen ? `Last seen ${utils.formatTime(lastSeen)}` : 'Offline';
-        headerStatus.classList.remove('text-green-500', 'font-medium');
-        headerStatus.classList.add('text-gray-400');
+        headerStatus.className = 'text-xs text-gray-400';
     }
 }
 
@@ -264,15 +205,25 @@ function scrollToBottom() {
     messagesContainer.scrollTop = messagesContainer.scrollHeight;
 }
 
+sendBtn.onclick = sendMessage;
+messageInput.onkeypress = (e) => e.key === 'Enter' && sendMessage();
+
 attachBtn.onclick = () => fileInput.click();
 fileInput.onchange = () => {
     if (fileInput.files[0]) {
-        previewTitle.innerText = "Attachment";
+        previewTitle.innerText = "Send File";
         previewText.innerText = fileInput.files[0].name;
         actionPreview.classList.remove('hidden');
     }
 };
 
+window.cancelAction = () => {
+    isEditing = false;
+    replyToId = null;
+    actionPreview.classList.add('hidden');
+};
+
+// Typing indicator send
 let typingTimeout;
 messageInput.oninput = () => {
     set(ref(db, `typing/${contactId}/${currentUser.id}`), true);
